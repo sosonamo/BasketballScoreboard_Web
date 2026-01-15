@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>농구 점수판 (H-Bird Web)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        /* [스타일 디자인 구역] */
+        body { font-family: 'Arial', sans-serif; background-color: #121212; color: white; margin: 0; padding: 10px; user-select: none; }
+        .container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* 상단 헤더 (타이머) */
+        .header { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; border-radius: 10px; }
+        .timer-box { text-align: center; flex-grow: 1; }
+        .main-timer { font-size: 4rem; font-weight: bold; color: #00ff00; font-family: monospace; }
+        .shot-clock { font-size: 3rem; font-weight: bold; color: #ff3333; font-family: monospace; margin-top: -10px; }
+        .quarter { font-size: 1.5rem; color: #aaa; }
+        .danger-time { color: #ff0000 !important; }
+
+        /* 메인 점수판 */
+        .scoreboard { display: flex; justify-content: space-between; gap: 10px; }
+        .team-box { background: #333; flex: 1; padding: 15px; border-radius: 10px; text-align: center; }
+        .team-name { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; display: block; width: 100%; background: transparent; color: white; border: none; text-align: center;}
+        .score { font-size: 5rem; font-weight: bold; color: #fff; margin: 10px 0; }
+        
+        /* 버튼 그룹 */
+        .btn-group { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+        button { cursor: pointer; border: none; border-radius: 5px; padding: 10px; font-weight: bold; color: white; font-size: 1rem; touch-action: manipulation; }
+        .btn-score { background-color: #4CAF50; width: 30%; }
+        .btn-minus { background-color: #f44336; width: 30%; font-size: 0.8rem; }
+        .btn-control { background-color: #555; padding: 10px 20px; }
+        .btn-foul { background-color: #ff9800; width: 45%; }
+        .btn-to { background-color: #2196F3; width: 45%; }
+        
+        /* 파울/타임아웃 표시 */
+        .stats-row { display: flex; justify-content: space-around; margin-top: 10px; font-size: 1.2rem; }
+        .stat-label { font-size: 0.8rem; color: #bbb; }
+        .foul-danger { color: red; font-weight: bold; }
+
+        /* 컨트롤 패널 */
+        .controls { display: flex; gap: 10px; justify-content: center; padding: 10px; background: #222; border-radius: 10px; flex-wrap: wrap; }
+        .control-btn { background: #444; color: white; padding: 10px 15px; border-radius: 5px; }
+        .active { background: #007bff; }
+    </style>
+</head>
+<body>
+
+<div id="app" class="container">
+    
+    <div class="header">
+        <div class="quarter">
+            <button @click="changeQuarter(-1)" class="btn-control">◀</button>
+            {{ quarter }}Q
+            <button @click="changeQuarter(1)" class="btn-control">▶</button>
+        </div>
+        <div class="timer-box">
+            <div class="main-timer" :class="{ 'danger-time': isGameTimeDanger }" @click="toggleGameTimer">
+                {{ formattedGameTime }}
+            </div>
+            <div class="shot-clock" :class="{ 'danger-time': shotClock <= 5 }" @click="toggleShotClock">
+                {{ shotClock }}
+            </div>
+        </div>
+        <div>
+            <button @click="resetShotClock(24)" class="btn-control" style="background:#d32f2f;">24</button>
+            <button @click="resetShotClock(14)" class="btn-control" style="background:#d32f2f;">14</button>
+        </div>
+    </div>
+
+    <div class="scoreboard">
+        <div class="team-box">
+            <input v-model="teamA.name" class="team-name">
+            <div class="score">{{ teamA.score }}</div>
+            <div class="btn-group">
+                <button class="btn-score" @click="addScore('A', 1)">+1</button>
+                <button class="btn-score" @click="addScore('A', 2)">+2</button>
+                <button class="btn-score" @click="addScore('A', 3)">+3</button>
+                <button class="btn-minus" @click="addScore('A', -1)">-1</button>
+            </div>
+            <div class="stats-row">
+                <div>
+                    <div class="stat-label">TEAM FOUL</div>
+                    <div :class="{ 'foul-danger': teamA.foul >= 4 }">{{ teamA.foul }}</div>
+                    <button class="btn-foul" @click="addFoul('A', 1)">Foul+</button>
+                </div>
+                <div>
+                    <div class="stat-label">TIMEOUT</div>
+                    <div>{{ teamA.timeout }}/3</div>
+                    <button class="btn-to" @click="useTimeout('A')">Time</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="team-box">
+            <input v-model="teamB.name" class="team-name">
+            <div class="score">{{ teamB.score }}</div>
+            <div class="btn-group">
+                <button class="btn-score" @click="addScore('B', 1)">+1</button>
+                <button class="btn-score" @click="addScore('B', 2)">+2</button>
+                <button class="btn-score" @click="addScore('B', 3)">+3</button>
+                <button class="btn-minus" @click="addScore('B', -1)">-1</button>
+            </div>
+            <div class="stats-row">
+                <div>
+                    <div class="stat-label">TEAM FOUL</div>
+                    <div :class="{ 'foul-danger': teamB.foul >= 4 }">{{ teamB.foul }}</div>
+                    <button class="btn-foul" @click="addFoul('B', 1)">Foul+</button>
+                </div>
+                <div>
+                    <div class="stat-label">TIMEOUT</div>
+                    <div>{{ teamB.timeout }}/3</div>
+                    <button class="btn-to" @click="useTimeout('B')">Time</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" :class="{ 'active': isGameRunning }" @click="toggleGameTimer">
+            {{ isGameRunning ? '⏸ 일시정지' : '▶ 게임시작' }}
+        </button>
+        <button class="control-btn" @click="resetGame">🔄 경기 초기화</button>
+        <button class="control-btn" @click="enableSound">🔊 소리 켜기 (필수)</button>
+    </div>
+
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                quarter: 1,
+                gameTimeSec: 600, // 10분
+                shotClock: 24,
+                isGameRunning: false,
+                isShotClockRunning: false,
+                timerInterval: null,
+                
+                teamA: { name: 'TEAM A', score: 0, foul: 0, timeout: 3 },
+                teamB: { name: 'TEAM B', score: 0, foul: 0, timeout: 3 },
+                
+                audioContext: null // 부저 소리용
+            }
+        },
+        computed: {
+            formattedGameTime() {
+                const m = Math.floor(this.gameTimeSec / 60);
+                const s = this.gameTimeSec % 60;
+                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            },
+            isGameTimeDanger() {
+                return this.gameTimeSec <= 10 && this.gameTimeSec > 0;
+            }
+        },
+        methods: {
+            // --- 게임 로직 ---
+            toggleGameTimer() {
+                this.isGameRunning = !this.isGameRunning;
+                if (this.isGameRunning) {
+                    this.isShotClockRunning = true;
+                    this.startTimer();
+                } else {
+                    this.isShotClockRunning = false;
+                    this.stopTimer();
+                }
+            },
+            toggleShotClock() {
+                this.isShotClockRunning = !this.isShotClockRunning;
+            },
+            startTimer() {
+                if (this.timerInterval) return;
+                this.timerInterval = setInterval(() => {
+                    if (!this.isGameRunning) return;
+
+                    // 게임 시간 감소
+                    if (this.gameTimeSec > 0) {
+                        this.gameTimeSec--;
+                        // TTS (5초 이하)
+                        if (this.gameTimeSec > 0 && this.gameTimeSec <= 5) {
+                            this.speak(this.gameTimeSec);
+                        }
+                    }
+
+                    // 샷클락 감소
+                    if (this.isShotClockRunning && this.shotClock > 0) {
+                        this.shotClock--;
+                    }
+
+                    // 종료 체크
+                    if (this.gameTimeSec === 0 || (this.isShotClockRunning && this.shotClock === 0)) {
+                        this.playBuzzer();
+                        this.isGameRunning = false;
+                        this.isShotClockRunning = false;
+                        this.stopTimer();
+                    }
+                }, 1000);
+            },
+            stopTimer() {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            },
+            
+            // --- 점수 및 스탯 ---
+            addScore(team, point) {
+                if (team === 'A') this.teamA.score = Math.max(0, this.teamA.score + point);
+                else this.teamB.score = Math.max(0, this.teamB.score + point);
+            },
+            addFoul(team, count) {
+                if (team === 'A') {
+                    this.teamA.foul += count;
+                    if(this.teamA.foul > 5) this.teamA.foul = 5; // 팀파울 최대 5
+                } else {
+                    this.teamB.foul += count;
+                    if(this.teamB.foul > 5) this.teamB.foul = 5;
+                }
+            },
+            useTimeout(team) {
+                if (team === 'A' && this.teamA.timeout > 0) this.teamA.timeout--;
+                if (team === 'B' && this.teamB.timeout > 0) this.teamB.timeout--;
+            },
+            
+            // --- 시간 조작 ---
+            resetShotClock(sec) {
+                this.shotClock = sec;
+                this.isShotClockRunning = false; // 리셋 시 멈춤 (C# 로직 동일)
+            },
+            changeQuarter(val) {
+                let next = this.quarter + val;
+                if (next < 1) next = 1;
+                this.quarter = next;
+                this.gameTimeSec = 600; // 10분 리셋
+                this.shotClock = 24;
+                this.isGameRunning = false;
+                this.stopTimer();
+                this.teamA.foul = 0; // 팀파울 리셋
+                this.teamB.foul = 0;
+            },
+            resetGame() {
+                if(!confirm("정말 초기화 하시겠습니까?")) return;
+                this.quarter = 1;
+                this.gameTimeSec = 600;
+                this.shotClock = 24;
+                this.teamA = { name: 'TEAM A', score: 0, foul: 0, timeout: 3 };
+                this.teamB = { name: 'TEAM B', score: 0, foul: 0, timeout: 3 };
+                this.isGameRunning = false;
+                this.stopTimer();
+            },
+
+            // --- 사운드 (브라우저 내장 오디오 API 사용) ---
+            enableSound() {
+                // 브라우저는 사용자 클릭 없이는 소리 재생을 막으므로 초기화 필요
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                alert("소리가 활성화되었습니다.");
+            },
+            playBuzzer() {
+                if (!this.audioContext) return;
+                const osc = this.audioContext.createOscillator();
+                const gain = this.audioContext.createGain();
+                osc.type = 'square';
+                osc.frequency.value = 440; // 삑~ 소리
+                osc.connect(gain);
+                gain.connect(this.audioContext.destination);
+                osc.start();
+                
+                // 1.5초 후 정지
+                setTimeout(() => { osc.stop(); }, 1500);
+            },
+            speak(text) {
+                if ('speechSynthesis' in window) {
+                    const msg = new SpeechSynthesisUtterance(text);
+                    msg.lang = 'en-US'; // 영어로 카운트
+                    window.speechSynthesis.speak(msg);
+                }
+            }
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
