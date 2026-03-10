@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>농구 점수판 Basic</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <style>
+        /* 기본 설정 */
+        body { background-color: #121212; margin: 0; padding: 5px; user-select: none;
+            font-family: 'Arial', sans-serif;  color: white; }
+        .container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 50px;}
+        
+        /* Button Standard */
+        button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white;
+            touch-action: manipulation; transition: 0.2s; }
+        .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+        .btn-md { padding: 10px; font-size: 1rem; }
+        button:active { transform: scale(0.92); }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+        .timer_btn { background: #333; padding: 8px 12px; font-size: 0.8rem; }
+        
+        /* 3분할 레이아웃 */
+        .main-board {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            gap: 15px;
+        }
+
+        .side-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #252525;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .center-panel {
+            flex: 1.3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        /* ---  Side Panel --- */
+
+        /* Team Name */
+        .team-name-input { 
+            width: 100%; background: transparent; border: none; border-bottom: 2px solid #444;
+            color: white; font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 0px;
+        }
+        
+        /* Timeout */
+        .timeout-section { display: flex; flex-direction: column; align-items: center;
+            gap: 5px; margin-top: 30px; margin-bottom: 20px; }
+        .timeout-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
+        .timeout-dots { display: flex; gap: 8px; }
+        .timeout-dot { width: 16px; height: 16px; background-color: #444; border-radius: 50%;
+            cursor: pointer; transition: 0.2s; box-shadow: inset 0 0 5px rgba(0,0,0,0.5);}
+        .timeout-dot.active { background-color: #ffeb3b;
+            box-shadow: 0 0 10px #ffeb3b, inset 0 0 3px rgba(255,255,255,0.8); }
+
+        /* Foul */
+        .foul-section { text-align: center; margin-top: 20px; margin-bottom: 30px; }
+        .foul-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
+        .foul-controls { display: flex; align-items: flex-end; justify-content: center; gap: 15px; }
+        .foul-btn { background-color: #444; color: white; border: none; padding: 5px 12px; border-radius: 4px;
+            font-size: 1rem; margin-bottom: 5px; cursor: pointer; }
+        .foul-number { font-size: 4.0rem; font-weight: bold; min-width: 40px; transition: color 0.3s; }
+        .danger-text {color: #ff3333; text-shadow: 0 0 10px rgba(255, 51, 51, 0.5); }
+
+        /* Team Score */
+        .totalScore-section { text-align: center; align-items: center; margin-top: 30px; margin-bottom: 20px; }
+        .totalScore-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
+        .totalScore-controls { display: flex; justify-content: center; gap: 8px;
+            font-size: 5rem; font-weight: bold; line-height: 1; margin: 5px 0; }
+        .totalScore-btn { background: #333; color: #fff; border: 1px solid #444;
+            padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .totalScore-btn.plus:hover { background: #555; }
+
+        
+        /* --- Center Panel --- */
+        /* Quarter */
+        .quarter-section { text-align: center; margin-top: 80px; margin-bottom: 10px; }
+        .quarter-controls { font-size: 1.5rem; font-weight: bold; color: #ff9800; }
+
+        /* Game Clock */
+        .gameClock-section { text-align: center; margin-top: 10px; margin-bottom: 30px; }
+        .gameClock-controls { font-size: 4.0rem; color: #00ff00; cursor: pointer; line-height: 1; }
+
+
+        /* Shot Clock */
+        .shotClock-section { text-align: center; margin-top: 20px; margin-bottom: 30px; }
+        .shotClock-controls { font-size: 6.0rem; color: #ffffff; cursor: pointer; line-height: 1; }
+        .shotClock-danger { color: #ff0000 !important; }
+
+
+        /* --- Under Control Bar (fixed) --- */
+        .option-section { text-align: center; margin-top: 20px; margin-bottom: 30px; }
+        .option-controls { display: flex; position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 10px;
+            justify-content: center; gap: 10px; border-top: 1px solid #333; }
+        .option-btn { background: #333; padding: 8px 12px; font-size: 0.8rem; }
+
+    </style>
+</head>
+<body>
+
+
+<div id="app" class="container">
+    
+    <div class="main-board">
+
+        <!-- Side Panel (Home) -->
+        <div class="side-panel">
+            
+            <input v-model="teamA.name" class="team-name-input">
+
+            <div class="timeout-section">
+                <span class="timeout-label">TIMEOUT</span>
+                <div class="timeout-dots">
+                    <div v-for="n in 3" 
+                         :key="n" 
+                         class="timeout-dot"
+                         :class="{ 'active': n <= teamA.timeout }"
+                         @click="toggleTimeout('A', n)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="foul-section">
+                <div class="foul-label">TEAM FOUL</div>
+                <div class="foul-controls">
+                    <button class="foul-btn" @click="updateFoul('A', -1)">-1</button>
+                    
+                    <span class="foul-number" :class="{ 'danger-text': teamAFoul >= 4 }">
+                        {{ teamAFoul }}
+                    </span>
+                    
+                    <button class="foul-btn" @click="updateFoul('A', 1)">+1</button>
+                </div>
+            </div>
+
+            <div class="totalScore-section">
+                <div class="totalScore-label">TEAM SCORE</div>
+                <div class="totalScore-controls" style="color:#4fc3f7">{{ teamAScore }}</div>
+            
+                <div class="btn-group">
+                    <button class="totalScore-btn" @click="updateScore('A', -1)">-1</button>
+                    <button class="totalScore-btn plus" @click="updateScore('A', 1)">+1</button>
+                    <button class="totalScore-btn plus" @click="updateScore('A', 2)">+2</button>
+                    <button class="totalScore-btn plus" @click="updateScore('A', 3)">+3</button>
+                </div>
+            </div>
+            
+        </div>
+    
+        <!-- Center Panel -->
+        <div class="center-panel">
+
+            <div class="quarter-section">
+                <div class="quarter-controls">{{ quarter }}Q</div>
+            </div>
+            
+            <div class="gameClock-section">
+                <div class="gameClock-controls" @click="toggleGameTimer">{{ formattedGameTime }}</div>
+                <div class="btn-group">
+                    <button class="timer_btn" @click="modifyGameTime(-60)">-1m</button>
+                    <button class="timer_btn" @click="changeQuarter(-1)">Pre Q</button>
+                    <button class="timer_btn" @click="changeQuarter(1)">Next Q</button>
+                    <button class="timer_btn" @click="modifyGameTime(60)">+1m</button>
+                </div>
+            </div>
+            
+            <div class="shotClock-section">
+                <div class="shotClock-controls" @click="toggleShotClock">{{ shotClock }}</div>
+                <div class="btn-group">
+                    <button class="timer_btn" @click="modifyShotClock(-1)">-1s</button>
+                    <button class="timer_btn" style="background:#d32f2f;" @click="resetShotClock(24)">24</button>
+                    <button class="timer_btn" style="background:#d32f2f;" @click="resetShotClock(14)">14</button>
+                    <button class="timer_btn" @click="modifyShotClock(1)">+1s</button>
+                </div>
+            </div>
+
+        </div>
+    
+        <!-- Side Panel (Away) -->
+        <div class="side-panel">
+            <input v-model="teamB.name" class="team-name-input">
+            
+            <div class="timeout-section">
+                <span class="timeout-label">TIMEOUT</span>
+                <div class="timeout-dots">
+                    <div v-for="n in 3" 
+                         :key="n" 
+                         class="timeout-dot"
+                         :class="{ 'active': n <= teamB.timeout }"
+                         @click="toggleTimeout('B', n)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="foul-section">
+                <div class="foul-label">TEAM FOUL</div>
+                <div class="foul-controls">
+                    <button class="foul-btn" @click="updateFoul('B', -1)">-1</button>
+                    
+                    <span class="foul-number" :class="{ 'danger-text': teamBFoul >= 4 }">
+                        {{ teamBFoul }}
+                    </span>
+                    
+                    <button class="foul-btn" @click="updateFoul('B', 1)">+1</button>
+                </div>
+            </div>
+
+            <div class="totalScore-section">
+                <div class="totalScore-label">TEAM SCORE</div>
+                <div class="totalScore-controls" style="color:#ff8a65">{{ teamBScore }}</div>
+            
+                <div class="btn-group">
+                    <button class="totalScore-btn" @click="updateScore('B', -1)">-1</button>
+                    <button class="totalScore-btn plus" @click="updateScore('B', 1)">+1</button>
+                    <button class="totalScore-btn plus" @click="updateScore('B', 2)">+2</button>
+                    <button class="totalScore-btn plus" @click="updateScore('B', 3)">+3</button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- 하단 컨트롤바 -->
+    <div style="height:50px;"></div>
+    <div class="controls">
+        <button class="option-btn" style="background:#d32f2f;" @click="resetGame">🔄 Reset</button>
+        <button class="option-btn" style="background:#dad048;" @click="enableSound">🔊 Sound</button>
+        <button class="option-btn" style="background:#5161b6;" @click="save">💾 Save</button>
+    </div>
+
+</div>
+
+<script type="module">
+    import { initialTimerData, TimerLogic } from './boardLogic.js';
+
+    const { createApp } = Vue;
+    createApp({
+        data() {
+            return {
+                ...JSON.parse(JSON.stringify(initialTimerData)),
+                // 팀 데이터 초기화 (HTML의 v-model과 연결)
+                teamA: { name: 'HOME', timeout: 0 },
+                teamB: { name: 'AWAY', timeout: 0 },
+                teamAScore: 0,
+                teamBScore: 0,
+                teamAFoul: 0,
+                teamBFoul: 0,
+                timerInterval: null
+            }
+        },
+        computed: {
+            // 게임 시간을 00:00 포맷으로 변환 (UI 표시용)
+            formattedGameTime() {
+                return TimerLogic.formatTime(this.gameTimeSec);
+            },
+            // 1분 미만일 때 빨간색으로 변하게 하는 로직
+            isGameTimeDanger() {
+                return this.gameTimeSec < 60;
+            },
+        },
+        methods: {
+            toggleGameTimer() {
+                if (this.isGameRunning) {
+                    this.stopTimer(); // 실행 중이면 정지
+                } else {
+                    this.startTimer(); // 정지 중이면 시작
+                }
+            },
+            // --- 시간 기능 (가운데 패널) ---
+            startTimer() {
+                // 이미 타이머가 돌아가고 있다면 중복 실행 방지
+                if (this.timerInterval) return;
+
+                this.isGameRunning = true; // 게임 상태를 실행 중으로 변경
+            
+                this.timerInterval = setInterval(() => {
+                    TimerLogic.tick(
+                        this, 
+                        this.onGameEnd,     // 경기 종료 시 실행할 함수
+                        this.onShotClockEnd // 샷클락 종료 시 실행할 함수
+                    );
+                }, 1000); // 1000ms = 1초
+            },
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+                this.isGameRunning = false;
+            },
+            modifyGameTime(sec) { // +/- 1분 기능
+                this.gameTimeSec = Math.max(0, this.gameTimeSec + sec);
+            },
+            modifyShotClock(sec) { // +/- 1초 기능
+                this.shotClock = Math.max(0, this.shotClock + sec);
+            },
+            resetShotClock(sec) {
+                TimerLogic.resetShotClock(this, sec);
+            },
+            changeQuarter(val) {
+                if (val > 0) TimerLogic.nextQuarter(this);
+                else this.quarter = Math.max(1, this.quarter - 1);
+            },
+
+            // --- 점수 및 파울 (양옆 패널) ---
+            toggleTimeout(team, index) {
+                const target = team === 'A' ? this.teamA : this.teamB;
+                
+                // 현재 켜져 있는 불을 누르면 꺼짐 (타임아웃 사용)
+                if (index === target.timeout) {
+                    target.timeout--;
+                    this.stopTimer(); // 작전타임 시 타이머 정지 (선택 사항)
+                } 
+                // 바로 다음 꺼져 있는 불을 누르면 켜짐 (타임아웃 취소)
+                else if (index === target.timeout + 1) {
+                    target.timeout++;
+                }
+                // 그 외의 경우는 작동하지 않음 (순서대로 켜고 꺼야 함)
+            },
+            updateScore(team, val) {
+                if (team === 'A') this.teamAScore = Math.max(0, this.teamAScore + val);
+                else this.teamBScore = Math.max(0, this.teamBScore + val);
+            },
+            updateFoul(team, val) {
+                if (team === 'A') {
+                    // 0과 5 사이로 제한
+                    const newFoul = this.teamAFoul + val;
+                    if (newFoul >= 0 && newFoul <= 5) {
+                        this.teamAFoul = newFoul;
+                    }
+                } else {
+                    const newFoul = this.teamBFoul + val;
+                    if (newFoul >= 0 && newFoul <= 5) {
+                        this.teamBFoul = newFoul;
+                    }
+                }
+            },
+
+            // --- 시스템 기능 ---
+            onGameEnd() { this.stopTimer(); alert("경기 종료!"); },
+            onShotClockEnd() { this.stopTimer(); alert("24초 종료!"); },
+            resetGame() { if(confirm("초기화할까요?")) location.reload(); },
+            Save() { alert("데이터가 저장되었습니다. (Pro 버전에서는 DB로 전송됩니다)"); },
+            enableSound() { alert("브라우저 소리 권한이 활성화되었습니다."); }
+        }
+    }).mount('#app');
+</script>
+
+</body>
+
+</html>
