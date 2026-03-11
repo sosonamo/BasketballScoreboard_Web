@@ -14,13 +14,13 @@
         .context-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
 
         /* Button Standard */
-        button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white;
+        /*button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white;
             touch-action: manipulation; transition: 0.2s; }
         .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
         .btn-md { padding: 10px; font-size: 1rem; }
-        button:active { transform: scale(0.92); }
+        button:active { transform: scale(0.92); }*/
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-        .standard-btn { background: #333; color: #fff; border: 1px solid #444;
+        .standard-btn { width: 50px; background: #333; color: #fff; border: 1px solid #444;
             padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .standard-btn.plus:hover { background: #555; }
         
@@ -71,15 +71,16 @@
         .timeout-dot.active { background-color: #ffeb3b;
             box-shadow: 0 0 10px #ffeb3b, inset 0 0 3px rgba(255,255,255,0.8); }
 
-        /* Foul */
-        .foul-section { text-align: center; margin-top: 30px; margin-bottom: 20px; }
-        .foul-number { font-size: 4.0rem; font-weight: bold; min-width: 40px; transition: color 0.3s; }
+        /* Team Foul */
+        .foul-section { text-align: center; margin-top: 35px; margin-bottom: 20px; }
+        .foul-number { margin-top: 10px; margin-bottom: 0px;
+            font-size: 4.0rem; font-weight: bold; min-width: 40px; transition: color 0.3s; }
         .danger-text {color: #ff3333; text-shadow: 0 0 10px rgba(255, 51, 51, 0.5); }
 
         /* Team Score */
-        .totalScore-section { text-align: center; align-items: center; margin-top: 30px; margin-bottom: 20px; }
-        .totalScore-controls { display: flex; justify-content: center; gap: 8px;
-            font-size: 5rem; font-weight: bold; line-height: 1; margin: 5px 0; }
+        .totalScore-section { text-align: center; align-items: center; margin-top: 40px; margin-bottom: 20px; }
+        .totalScore-number { display: flex; justify-content: center; gap: 8px; margin-top: 20px; margin-bottom: 20px;
+            font-size: 5rem; font-weight: bold; line-height: 1; }
 
         
         /* --- Center Panel --- */
@@ -89,23 +90,27 @@
             color: #ff9800; font-size: 1.5rem; font-weight: bold; text-align: center; }
         
         /* Quarter */
-        .quarter-section { text-align: center; margin-top: 4px; margin-bottom: 20px; }
-        .quarter-controls { font-size: 1.5rem; font-weight: bold; color: white; }
+        .quarter-section { text-align: center; margin-top: 4px; margin-bottom: 19px; }
+        .quarter-number { font-size: 1.5rem; font-weight: bold; color: white; }
 
         /* Game Clock */
-        .gameClock-section { text-align: center; margin-top: 4px; margin-bottom: 20px; }
-        .gameClock-controls { font-size: 4.0rem; color: #00ff00; font-weight: bold; cursor: pointer; line-height: 1; }
+        .gameClock-section { text-align: center; margin-top: 10px; margin-bottom: 20px; }
+        .gameClock-number { margin-top: 15px; margin-bottom: 15px; cursor: pointer;
+            font-size: 4.0rem; color: #00ff00; font-weight: bold; line-height: 1; }
 
         /* Shot Clock */
-        .shotClock-section { text-align: center; margin-top: 4px; margin-bottom: 20px; }
-        .shotClock-controls { font-size: 6.0rem; color: #ffffff; font-weight: bold; cursor: pointer; line-height: 1; }
+        .shotClock-section { text-align: center; margin-top: 20px; margin-bottom: 20px; }
+        .shotClock-number { margin-top: 15px; margin-bottom: 10px; cursor: pointer; line-height: 1;
+            font-size: 6.0rem; color: #ffffff; font-weight: bold; }
         .shotClock-danger { color: #ff0000 !important; }
 
 
         /* --- Under Control Bar (fixed) --- */
         .option-section { display: flex; position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 10px;
             justify-content: center; gap: 10px; border-top: 1px solid #333; }
-        .option-btn { background: #333; padding: 8px 12px; font-size: 0.8rem; }
+        .option-btn { width: 100px; background: #333; border: none; border-radius: 4px; padding: 8px 12px;
+            cursor: pointer; touch-action: manipulation; transition: 0.2s;
+            font-size: 0.8rem; font-weight: bold; color: white;}
 
     </style>
 </head>
@@ -135,19 +140,16 @@
 
             <div class="foul-section">
                 <div class="context-label">TEAM FOUL</div>
-                <span class="foul-number" :class="{ 'danger-text': teamAFoul >= 4 }">
-                    {{ teamAFoul }}
-                </span>
+                <div class="foul-number" :class="{ 'danger-text': teamAFoul >= 4 }">{{ teamAFoul }}</div>
                 <div class="btn-group">
                     <button class="standard-btn" @click="updateFoul('A', -1)">-1</button>
                     <button class="standard-btn" @click="updateFoul('A', 1)">+1</button>
                 </div>
-                
             </div>
 
             <div class="totalScore-section">
                 <div class="context-label">TEAM SCORE</div>
-                <div class="totalScore-controls" style="color:#4fc3f7">{{ teamAScore }}</div>
+                <div class="totalScore-number" style="color:#4fc3f7">{{ teamAScore }}</div>
                 <div class="btn-group">
                     <button class="standard-btn" @click="updateScore('A', -1)">-1</button>
                     <button class="standard-btn plus" @click="updateScore('A', 1)">+1</button>
@@ -165,27 +167,29 @@
 
             <div class="quarter-section">
                 <div class="context-label">QUARTER</div>
-                <div class="quarter-controls">{{ quarter }}Q</div>
+                <div class="quarter-number">{{ quarter }}Q</div>
             </div>
             
             <div class="gameClock-section">
                 <div class="context-label">GAME CLOCK</div>
-                <div class="gameClock-controls" @click="toggleGameTimer">{{ formattedGameTime }}</div>
+                <div class="gameClock-number" @click="toggleGameClock">{{ formattedGameTime }}</div>
                 <div class="btn-group">
                     <button class="standard-btn" @click="modifyGameTime(-60)">-1m</button>
-                    <button class="standard-btn" @click="changeQuarter(-1)">Pre Q</button>
-                    <button class="standard-btn" @click="changeQuarter(1)">Next Q</button>
+                    <button class="standard-btn" style="width: 80px;" @click="changeQuarter(-1)">Pre Q</button>
+                    <button class="standard-btn" style="width: 80px;" @click="changeQuarter(1)">Next Q</button>
                     <button class="standard-btn" @click="modifyGameTime(60)">+1m</button>
                 </div>
             </div>
             
             <div class="shotClock-section">
                 <div class="context-label">SHOT CLOCK</div>
-                <div class="shotClock-controls" @click="toggleShotClock">{{ shotClock }}</div>
+                <div class="shotClock-number" @click="toggleShotClock">{{ shotClock }}</div>
                 <div class="btn-group">
                     <button class="standard-btn" @click="modifyShotClock(-1)">-1s</button>
-                    <button class="standard-btn" style="background:#d32f2f;" @click="resetShotClock(24)">24</button>
-                    <button class="standard-btn" style="background:#d32f2f;" @click="resetShotClock(14)">14</button>
+                    <button class="standard-btn" style="background:#258325; width: 80px;"
+                        @click="resetShotClock(24)">24</button>
+                    <button class="standard-btn" style="background:#258325; width: 80px;"
+                        @click="resetShotClock(14)">14</button>
                     <button class="standard-btn" @click="modifyShotClock(1)">+1s</button>
                 </div>
             </div>
@@ -210,9 +214,7 @@
 
             <div class="foul-section">
                 <div class="context-label">TEAM FOUL</div>
-                <span class="foul-number" :class="{ 'danger-text': teamBFoul >= 4 }">
-                    {{ teamBFoul }}
-                </span>
+                <div class="foul-number" :class="{ 'danger-text': teamBFoul >= 4 }">{{ teamBFoul }}</div>
                 <div class="btn-group">
                     <button class="standard-btn" @click="updateFoul('B', -1)">-1</button>
                     <button class="standard-btn" @click="updateFoul('B', 1)">+1</button>
@@ -221,8 +223,7 @@
 
             <div class="totalScore-section">
                 <div class="context-label">TEAM SCORE</div>
-                <div class="totalScore-controls" style="color:#ff8a65">{{ teamBScore }}</div>
-            
+                <div class="totalScore-number" style="color:#ff8a65">{{ teamBScore }}</div>
                 <div class="btn-group">
                     <button class="standard-btn" @click="updateScore('B', -1)">-1</button>
                     <button class="standard-btn plus" @click="updateScore('B', 1)">+1</button>
@@ -234,12 +235,12 @@
         </div>
     </div>
 
-    <!-- 하단 컨트롤바 -->
+    <!-- Option Bar (under) -->
     <div style="height:50px;"></div>
     <div class="option-section">
         <button class="option-btn" style="background:#d32f2f;" @click="resetGame">🔄 Reset</button>
-        <button class="option-btn" style="background:#dad048;" @click="enableSound">🔊 Sound</button>
-        <button class="option-btn" style="background:#5161b6;" @click="save">💾 Save</button>
+        <button class="option-btn" style="background:#ba9852;" @click="enableSound">🔊 Sound</button>
+        <button class="option-btn" style="background:#1d2967;" @click="save">💾 Save</button>
     </div>
 
 </div>
@@ -259,6 +260,8 @@
                 teamBScore: 0,
                 teamAFoul: 0,
                 teamBFoul: 0,
+                gameInterval: null,
+                shotInterval: null,
                 timerInterval: null
             }
         },
@@ -301,6 +304,47 @@
                     this.timerInterval = null;
                 }
                 this.isGameRunning = false;
+            },
+
+            // --- 메인 게임 클락 제어 ---
+            toggleGameClock() {
+                if (this.isGameRunning) this.stopGameClock();
+                else this.startGameClock();
+            },
+            startGameClock() {
+                if (this.gameInterval) return;
+                this.isGameRunning = true;
+                this.gameInterval = setInterval(() => {
+                    if (this.gameTimeSec > 0) this.gameTimeSec--;
+                    else this.stopGameClock();
+                }, 1000);
+            },
+            stopGameClock() {
+                clearInterval(this.gameInterval);
+                this.gameInterval = null;
+                this.isGameRunning = false;
+            },
+
+            // --- 샷클락 제어 ---
+            toggleShotClock() {
+                if (this.isShotClockRunning) this.stopShotClock();
+                else this.startShotClock();
+            },
+            startShotClock() {
+                if (this.shotInterval) return;
+                this.isShotClockRunning = true;
+                this.shotInterval = setInterval(() => {
+                    if (this.shotClock > 0) this.shotClock--;
+                    else {
+                        this.stopShotClock();
+                        alert("24초 종료!");
+                    }
+                }, 1000);
+            },
+            stopShotClock() {
+                clearInterval(this.shotInterval);
+                this.shotInterval = null;
+                this.isShotClockRunning = false;
             },
             modifyGameTime(sec) { // +/- 1분 기능
                 this.gameTimeSec = Math.max(0, this.gameTimeSec + sec);
