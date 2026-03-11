@@ -11,7 +11,8 @@
         body { background-color: #121212; margin: 0; padding: 5px; user-select: none;
             font-family: 'Arial', sans-serif;  color: white; }
         .container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 50px;}
-        
+        .context-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
+
         /* Button Standard */
         button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white;
             touch-action: manipulation; transition: 0.2s; }
@@ -19,7 +20,9 @@
         .btn-md { padding: 10px; font-size: 1rem; }
         button:active { transform: scale(0.92); }
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-        .timer_btn { background: #333; padding: 8px 12px; font-size: 0.8rem; }
+        .standard-btn { background: #333; color: #fff; border: 1px solid #444;
+            padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .standard-btn.plus:hover { background: #555; }
         
         /* 3분할 레이아웃 */
         .main-board {
@@ -50,21 +53,18 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
         }
 
         /* ---  Side Panel --- */
 
         /* Team Name */
-        .team-name-input { 
-            width: 100%; background: transparent; border: none; border-bottom: 2px solid #444;
-            color: white; font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 0px;
-        }
+        .team-name-input { width: 100%; background: transparent; border: none; border-bottom: 2px solid #444;
+            color: white; font-size: 1.5rem; font-weight: bold; text-align: center; margin-bottom: 0px; }
         
         /* Timeout */
         .timeout-section { display: flex; flex-direction: column; align-items: center;
             gap: 5px; margin-top: 30px; margin-bottom: 20px; }
-        .timeout-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
         .timeout-dots { display: flex; gap: 8px; }
         .timeout-dot { width: 16px; height: 16px; background-color: #444; border-radius: 50%;
             cursor: pointer; transition: 0.2s; box-shadow: inset 0 0 5px rgba(0,0,0,0.5);}
@@ -72,43 +72,38 @@
             box-shadow: 0 0 10px #ffeb3b, inset 0 0 3px rgba(255,255,255,0.8); }
 
         /* Foul */
-        .foul-section { text-align: center; margin-top: 20px; margin-bottom: 30px; }
-        .foul-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
-        .foul-controls { display: flex; align-items: flex-end; justify-content: center; gap: 15px; }
-        .foul-btn { background-color: #444; color: white; border: none; padding: 5px 12px; border-radius: 4px;
-            font-size: 1rem; margin-bottom: 5px; cursor: pointer; }
+        .foul-section { text-align: center; margin-top: 30px; margin-bottom: 20px; }
         .foul-number { font-size: 4.0rem; font-weight: bold; min-width: 40px; transition: color 0.3s; }
         .danger-text {color: #ff3333; text-shadow: 0 0 10px rgba(255, 51, 51, 0.5); }
 
         /* Team Score */
         .totalScore-section { text-align: center; align-items: center; margin-top: 30px; margin-bottom: 20px; }
-        .totalScore-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
         .totalScore-controls { display: flex; justify-content: center; gap: 8px;
             font-size: 5rem; font-weight: bold; line-height: 1; margin: 5px 0; }
-        .totalScore-btn { background: #333; color: #fff; border: 1px solid #444;
-            padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-        .totalScore-btn.plus:hover { background: #555; }
 
         
         /* --- Center Panel --- */
+        /* Title */
+        .title-label { width: 100%; background: transparent; border: none; border-bottom: 0px solid #444;
+            margin-top: 20px; margin-bottom: 10px;
+            color: #ff9800; font-size: 1.5rem; font-weight: bold; text-align: center; }
+        
         /* Quarter */
-        .quarter-section { text-align: center; margin-top: 80px; margin-bottom: 10px; }
-        .quarter-controls { font-size: 1.5rem; font-weight: bold; color: #ff9800; }
+        .quarter-section { text-align: center; margin-top: 4px; margin-bottom: 20px; }
+        .quarter-controls { font-size: 1.5rem; font-weight: bold; color: white; }
 
         /* Game Clock */
-        .gameClock-section { text-align: center; margin-top: 10px; margin-bottom: 30px; }
-        .gameClock-controls { font-size: 4.0rem; color: #00ff00; cursor: pointer; line-height: 1; }
-
+        .gameClock-section { text-align: center; margin-top: 4px; margin-bottom: 20px; }
+        .gameClock-controls { font-size: 4.0rem; color: #00ff00; font-weight: bold; cursor: pointer; line-height: 1; }
 
         /* Shot Clock */
-        .shotClock-section { text-align: center; margin-top: 20px; margin-bottom: 30px; }
-        .shotClock-controls { font-size: 6.0rem; color: #ffffff; cursor: pointer; line-height: 1; }
+        .shotClock-section { text-align: center; margin-top: 4px; margin-bottom: 20px; }
+        .shotClock-controls { font-size: 6.0rem; color: #ffffff; font-weight: bold; cursor: pointer; line-height: 1; }
         .shotClock-danger { color: #ff0000 !important; }
 
 
         /* --- Under Control Bar (fixed) --- */
-        .option-section { text-align: center; margin-top: 20px; margin-bottom: 30px; }
-        .option-controls { display: flex; position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 10px;
+        .option-section { display: flex; position: fixed; bottom: 0; left: 0; width: 100%; background: #111; padding: 10px;
             justify-content: center; gap: 10px; border-top: 1px solid #333; }
         .option-btn { background: #333; padding: 8px 12px; font-size: 0.8rem; }
 
@@ -127,7 +122,7 @@
             <input v-model="teamA.name" class="team-name-input">
 
             <div class="timeout-section">
-                <span class="timeout-label">TIMEOUT</span>
+                <span class="context-label">TIMEOUT</span>
                 <div class="timeout-dots">
                     <div v-for="n in 3" 
                          :key="n" 
@@ -139,27 +134,25 @@
             </div>
 
             <div class="foul-section">
-                <div class="foul-label">TEAM FOUL</div>
-                <div class="foul-controls">
-                    <button class="foul-btn" @click="updateFoul('A', -1)">-1</button>
-                    
-                    <span class="foul-number" :class="{ 'danger-text': teamAFoul >= 4 }">
-                        {{ teamAFoul }}
-                    </span>
-                    
-                    <button class="foul-btn" @click="updateFoul('A', 1)">+1</button>
+                <div class="context-label">TEAM FOUL</div>
+                <span class="foul-number" :class="{ 'danger-text': teamAFoul >= 4 }">
+                    {{ teamAFoul }}
+                </span>
+                <div class="btn-group">
+                    <button class="standard-btn" @click="updateFoul('A', -1)">-1</button>
+                    <button class="standard-btn" @click="updateFoul('A', 1)">+1</button>
                 </div>
+                
             </div>
 
             <div class="totalScore-section">
-                <div class="totalScore-label">TEAM SCORE</div>
+                <div class="context-label">TEAM SCORE</div>
                 <div class="totalScore-controls" style="color:#4fc3f7">{{ teamAScore }}</div>
-            
                 <div class="btn-group">
-                    <button class="totalScore-btn" @click="updateScore('A', -1)">-1</button>
-                    <button class="totalScore-btn plus" @click="updateScore('A', 1)">+1</button>
-                    <button class="totalScore-btn plus" @click="updateScore('A', 2)">+2</button>
-                    <button class="totalScore-btn plus" @click="updateScore('A', 3)">+3</button>
+                    <button class="standard-btn" @click="updateScore('A', -1)">-1</button>
+                    <button class="standard-btn plus" @click="updateScore('A', 1)">+1</button>
+                    <button class="standard-btn plus" @click="updateScore('A', 2)">+2</button>
+                    <button class="standard-btn plus" @click="updateScore('A', 3)">+3</button>
                 </div>
             </div>
             
@@ -168,27 +161,32 @@
         <!-- Center Panel -->
         <div class="center-panel">
 
+            <div class="title-label">Basketball Scoreboard</div>
+
             <div class="quarter-section">
+                <div class="context-label">QUARTER</div>
                 <div class="quarter-controls">{{ quarter }}Q</div>
             </div>
             
             <div class="gameClock-section">
+                <div class="context-label">GAME CLOCK</div>
                 <div class="gameClock-controls" @click="toggleGameTimer">{{ formattedGameTime }}</div>
                 <div class="btn-group">
-                    <button class="timer_btn" @click="modifyGameTime(-60)">-1m</button>
-                    <button class="timer_btn" @click="changeQuarter(-1)">Pre Q</button>
-                    <button class="timer_btn" @click="changeQuarter(1)">Next Q</button>
-                    <button class="timer_btn" @click="modifyGameTime(60)">+1m</button>
+                    <button class="standard-btn" @click="modifyGameTime(-60)">-1m</button>
+                    <button class="standard-btn" @click="changeQuarter(-1)">Pre Q</button>
+                    <button class="standard-btn" @click="changeQuarter(1)">Next Q</button>
+                    <button class="standard-btn" @click="modifyGameTime(60)">+1m</button>
                 </div>
             </div>
             
             <div class="shotClock-section">
+                <div class="context-label">SHOT CLOCK</div>
                 <div class="shotClock-controls" @click="toggleShotClock">{{ shotClock }}</div>
                 <div class="btn-group">
-                    <button class="timer_btn" @click="modifyShotClock(-1)">-1s</button>
-                    <button class="timer_btn" style="background:#d32f2f;" @click="resetShotClock(24)">24</button>
-                    <button class="timer_btn" style="background:#d32f2f;" @click="resetShotClock(14)">14</button>
-                    <button class="timer_btn" @click="modifyShotClock(1)">+1s</button>
+                    <button class="standard-btn" @click="modifyShotClock(-1)">-1s</button>
+                    <button class="standard-btn" style="background:#d32f2f;" @click="resetShotClock(24)">24</button>
+                    <button class="standard-btn" style="background:#d32f2f;" @click="resetShotClock(14)">14</button>
+                    <button class="standard-btn" @click="modifyShotClock(1)">+1s</button>
                 </div>
             </div>
 
@@ -199,7 +197,7 @@
             <input v-model="teamB.name" class="team-name-input">
             
             <div class="timeout-section">
-                <span class="timeout-label">TIMEOUT</span>
+                <span class="context-label">TIMEOUT</span>
                 <div class="timeout-dots">
                     <div v-for="n in 3" 
                          :key="n" 
@@ -211,27 +209,25 @@
             </div>
 
             <div class="foul-section">
-                <div class="foul-label">TEAM FOUL</div>
-                <div class="foul-controls">
-                    <button class="foul-btn" @click="updateFoul('B', -1)">-1</button>
-                    
-                    <span class="foul-number" :class="{ 'danger-text': teamBFoul >= 4 }">
-                        {{ teamBFoul }}
-                    </span>
-                    
-                    <button class="foul-btn" @click="updateFoul('B', 1)">+1</button>
+                <div class="context-label">TEAM FOUL</div>
+                <span class="foul-number" :class="{ 'danger-text': teamBFoul >= 4 }">
+                    {{ teamBFoul }}
+                </span>
+                <div class="btn-group">
+                    <button class="standard-btn" @click="updateFoul('B', -1)">-1</button>
+                    <button class="standard-btn" @click="updateFoul('B', 1)">+1</button>
                 </div>
             </div>
 
             <div class="totalScore-section">
-                <div class="totalScore-label">TEAM SCORE</div>
+                <div class="context-label">TEAM SCORE</div>
                 <div class="totalScore-controls" style="color:#ff8a65">{{ teamBScore }}</div>
             
                 <div class="btn-group">
-                    <button class="totalScore-btn" @click="updateScore('B', -1)">-1</button>
-                    <button class="totalScore-btn plus" @click="updateScore('B', 1)">+1</button>
-                    <button class="totalScore-btn plus" @click="updateScore('B', 2)">+2</button>
-                    <button class="totalScore-btn plus" @click="updateScore('B', 3)">+3</button>
+                    <button class="standard-btn" @click="updateScore('B', -1)">-1</button>
+                    <button class="standard-btn plus" @click="updateScore('B', 1)">+1</button>
+                    <button class="standard-btn plus" @click="updateScore('B', 2)">+2</button>
+                    <button class="standard-btn plus" @click="updateScore('B', 3)">+3</button>
                 </div>
             </div>
             
@@ -240,7 +236,7 @@
 
     <!-- 하단 컨트롤바 -->
     <div style="height:50px;"></div>
-    <div class="controls">
+    <div class="option-section">
         <button class="option-btn" style="background:#d32f2f;" @click="resetGame">🔄 Reset</button>
         <button class="option-btn" style="background:#dad048;" @click="enableSound">🔊 Sound</button>
         <button class="option-btn" style="background:#5161b6;" @click="save">💾 Save</button>
