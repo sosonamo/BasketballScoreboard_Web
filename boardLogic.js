@@ -6,6 +6,9 @@ export const initialTimerData = {
     shotClock: 24,     // 24초
     quarter: 1,
     isGameRunning: false,
+    isShotClockRunning: false,
+    gameInterval: null,
+    shotInterval: null,
     timerInterval: null
 };
 

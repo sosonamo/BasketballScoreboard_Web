@@ -12,6 +12,7 @@
             font-family: 'Arial', sans-serif;  color: white; }
         .container { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 50px;}
         .context-label { font-size: 0.7rem; color: #888; font-weight: bold; margin-bottom: 5px; }
+        .danger-text {color: #ff3333; text-shadow: 0 0 10px rgba(255, 51, 51, 0.5); }
 
         /* Button Standard */
         /*button { cursor: pointer; border: none; border-radius: 4px; font-weight: bold; color: white;
@@ -75,7 +76,6 @@
         .foul-section { text-align: center; margin-top: 35px; margin-bottom: 20px; }
         .foul-number { margin-top: 10px; margin-bottom: 0px;
             font-size: 4.0rem; font-weight: bold; min-width: 40px; transition: color 0.3s; }
-        .danger-text {color: #ff3333; text-shadow: 0 0 10px rgba(255, 51, 51, 0.5); }
 
         /* Team Score */
         .totalScore-section { text-align: center; align-items: center; margin-top: 40px; margin-bottom: 20px; }
@@ -101,7 +101,7 @@
         /* Shot Clock */
         .shotClock-section { text-align: center; margin-top: 20px; margin-bottom: 20px; }
         .shotClock-number { margin-top: 15px; margin-bottom: 10px; cursor: pointer; line-height: 1;
-            font-size: 6.0rem; color: #ffffff; font-weight: bold; }
+            font-size: 6.0rem; font-weight: bold; }
         .shotClock-danger { color: #ff0000 !important; }
 
 
@@ -159,7 +159,7 @@
             </div>
             
         </div>
-    
+            
         <!-- Center Panel -->
         <div class="center-panel">
 
@@ -167,23 +167,24 @@
 
             <div class="quarter-section">
                 <div class="context-label">QUARTER</div>
-                <div class="quarter-number">{{ quarter }}Q</div>
+                <div class="quarter-number">{{ displayQuarter }}</div>
             </div>
             
             <div class="gameClock-section">
                 <div class="context-label">GAME CLOCK</div>
                 <div class="gameClock-number" @click="toggleGameClock">{{ formattedGameTime }}</div>
                 <div class="btn-group">
-                    <button class="standard-btn" @click="modifyGameTime(-60)">-1m</button>
+                    <button class="standard-btn" @click="mdifityGameClock(-60)">-1m</button>
                     <button class="standard-btn" style="width: 80px;" @click="changeQuarter(-1)">Pre Q</button>
-                    <button class="standard-btn" style="width: 80px;" @click="changeQuarter(1)">Next Q</button>
-                    <button class="standard-btn" @click="modifyGameTime(60)">+1m</button>
+                    <button class="standard-btn" style="width: 80px;" @click="nextQuarter">Next Q</button>
+                    <button class="standard-btn" @click="mdifityGameClock(60)">+1m</button>
                 </div>
             </div>
             
             <div class="shotClock-section">
                 <div class="context-label">SHOT CLOCK</div>
-                <div class="shotClock-number" @click="toggleShotClock">{{ shotClock }}</div>
+                <div class="shotClock-number" :class="{ 'danger-text': shotClock <= 5 }"
+                    @click="toggleShotClock">{{ shotClock }}</div>
                 <div class="btn-group">
                     <button class="standard-btn" @click="modifyShotClock(-1)">-1s</button>
                     <button class="standard-btn" style="background:#258325; width: 80px;"
@@ -193,7 +194,6 @@
                     <button class="standard-btn" @click="modifyShotClock(1)">+1s</button>
                 </div>
             </div>
-
         </div>
     
         <!-- Side Panel (Away) -->
@@ -231,22 +231,24 @@
                     <button class="standard-btn plus" @click="updateScore('B', 3)">+3</button>
                 </div>
             </div>
-            
         </div>
+
     </div>
 
     <!-- Option Bar (under) -->
     <div style="height:50px;"></div>
     <div class="option-section">
         <button class="option-btn" style="background:#d32f2f;" @click="resetGame">🔄 Reset</button>
-        <button class="option-btn" style="background:#ba9852;" @click="enableSound">🔊 Sound</button>
-        <button class="option-btn" style="background:#1d2967;" @click="save">💾 Save</button>
+        <button class="option-btn" style="background:#ba9852;" @click="playBuzzer">🚨 Buzzer</button>
+        <button class="option-btn" style="background:#1d2967;" @click="saveFullGame">💾 Save</button>
+        <button class="option-btn" style="background:#1d2967;" @click="exportToJson">📤 Export</button>
     </div>
 
 </div>
 
 <script type="module">
     import { initialTimerData, TimerLogic } from './boardLogic.js';
+    import './firebaseConfig.js';
 
     const { createApp } = Vue;
     createApp({
@@ -254,6 +256,8 @@
             return {
                 ...JSON.parse(JSON.stringify(initialTimerData)),
                 // 팀 데이터 초기화 (HTML의 v-model과 연결)
+                teamId: '',
+                teamPassword: '',
                 teamA: { name: 'HOME', timeout: 0 },
                 teamB: { name: 'AWAY', timeout: 0 },
                 teamAScore: 0,
@@ -262,7 +266,8 @@
                 teamBFoul: 0,
                 gameInterval: null,
                 shotInterval: null,
-                timerInterval: null
+                timerInterval: null,
+                gameHistory: []
             }
         },
         computed: {
@@ -270,42 +275,21 @@
             formattedGameTime() {
                 return TimerLogic.formatTime(this.gameTimeSec);
             },
+            // Quarter
+            displayQuarter() {
+                if (this.quarter <= 4) {
+                    return this.quarter + "Q";
+                } else {
+                    return "Ex" + (this.quarter - 4); // 5Q -> Ex1, 6Q -> Ex2
+                }
+            },
             // 1분 미만일 때 빨간색으로 변하게 하는 로직
             isGameTimeDanger() {
                 return this.gameTimeSec < 60;
             },
         },
         methods: {
-            toggleGameTimer() {
-                if (this.isGameRunning) {
-                    this.stopTimer(); // 실행 중이면 정지
-                } else {
-                    this.startTimer(); // 정지 중이면 시작
-                }
-            },
-            // --- 시간 기능 (가운데 패널) ---
-            startTimer() {
-                // 이미 타이머가 돌아가고 있다면 중복 실행 방지
-                if (this.timerInterval) return;
-
-                this.isGameRunning = true; // 게임 상태를 실행 중으로 변경
-            
-                this.timerInterval = setInterval(() => {
-                    TimerLogic.tick(
-                        this, 
-                        this.onGameEnd,     // 경기 종료 시 실행할 함수
-                        this.onShotClockEnd // 샷클락 종료 시 실행할 함수
-                    );
-                }, 1000); // 1000ms = 1초
-            },
-            stopTimer() {
-                if (this.timerInterval) {
-                    clearInterval(this.timerInterval);
-                    this.timerInterval = null;
-                }
-                this.isGameRunning = false;
-            },
-
+        
             // --- 메인 게임 클락 제어 ---
             toggleGameClock() {
                 if (this.isGameRunning) this.stopGameClock();
@@ -334,23 +318,44 @@
                 if (this.shotInterval) return;
                 this.isShotClockRunning = true;
                 this.shotInterval = setInterval(() => {
-                    if (this.shotClock > 0) this.shotClock--;
-                    else {
-                        this.stopShotClock();
-                        alert("24초 종료!");
+                    if (this.shotClock > 0) {
+                        this.shotClock--;
+
+                        if (this.shotClock <= 5 && this.shotClock > 0) {
+                            this.speakNumber(this.shotClock); // 5, 4, 3, 2, 1 음성 출력
+                        }
+                        if (this.shotClock === 0) {
+                            this.playBuzzer();    // 0이 되면 삐~ 소리
+                            this.stopShotClock(); // 시계 정지
+                        }
                     }
-                }, 1000);
+                }, 1000); // 1000ms = 1초마다 반복
             },
             stopShotClock() {
                 clearInterval(this.shotInterval);
                 this.shotInterval = null;
                 this.isShotClockRunning = false;
             },
-            modifyGameTime(sec) { // +/- 1분 기능
-                this.gameTimeSec = Math.max(0, this.gameTimeSec + sec);
+
+            // --- Modify Clock
+            mdifityGameClock(sec) { // +/- 1분 기능
+                const maxTime = 720; // 12분(12 * 60초)
+                const newTime = this.gameTimeSec + sec;
+
+                if (newTime >= 0 && newTime <= maxTime) {
+                    this.gameTimeSec = newTime;
+                } else if (newTime > maxTime) {
+                    this.gameTimeSec = maxTime; // 12분을 초과하면 12분으로 고정
+                }
             },
             modifyShotClock(sec) { // +/- 1초 기능
-                this.shotClock = Math.max(0, this.shotClock + sec);
+                const newTime = this.shotClock + sec;
+    
+                if (newTime >= 0 && newTime <= 24) {
+                    this.shotClock = newTime;
+                } else if (newTime > 24) {
+                    this.shotClock = 24; // 24초를 초과하려고 하면 24로 고정
+                }
             },
             resetShotClock(sec) {
                 TimerLogic.resetShotClock(this, sec);
@@ -359,6 +364,27 @@
                 if (val > 0) TimerLogic.nextQuarter(this);
                 else this.quarter = Math.max(1, this.quarter - 1);
             },
+            nextQuarter() {
+                this.saveQuarterToHistory();
+                this.quarter++;
+                this.teamAFoul = 0;
+                this.teamBFoul = 0;
+                this.gameTimeSec = 600; 
+                this.shotClock = 24;
+                this.stopGameClock();
+                this.stopShotClock();
+                // alert(`${this.displayQuarter} 시작!`);
+            },
+
+            // --- Sound --- //
+            // Count down (TTS)
+            speakNumber(num) {
+                const message = new SpeechSynthesisUtterance(num.toString());
+                message.lang = 'ko-KR'; // 한국어 설정
+                message.rate = 1.5;     // 읽는 속도
+                window.speechSynthesis.speak(message);
+            },
+
 
             // --- 점수 및 파울 (양옆 패널) ---
             toggleTimeout(team, index) {
@@ -398,8 +424,122 @@
             onGameEnd() { this.stopTimer(); alert("경기 종료!"); },
             onShotClockEnd() { this.stopTimer(); alert("24초 종료!"); },
             resetGame() { if(confirm("초기화할까요?")) location.reload(); },
-            Save() { alert("데이터가 저장되었습니다. (Pro 버전에서는 DB로 전송됩니다)"); },
-            enableSound() { alert("브라우저 소리 권한이 활성화되었습니다."); }
+            // Buzzer
+            playBuzzer() {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'square'; // 전광판 특유의 거친 소리
+                oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // 주파수(음높이)
+                
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 1.5); // 2초 동안 재생
+            },
+            
+            // 쿼터 기록을 배열에 담는 내부 함수
+            saveQuarterToHistory() {
+                const record = {
+                    quarterName: this.displayQuarter, // Ex1, 4Q 등
+                    scoreA: this.teamAScore,
+                    scoreB: this.teamBScore,
+                    foulA: this.teamAFoul,
+                    foulB: this.teamBFoul
+                };
+                this.gameHistory.push(record);
+            },
+
+            /* localStorage Save Option
+            saveFullGame() {
+                // 현재 진행 중인 마지막 쿼터 데이터까지 포함해서 저장
+                const rawData = localStorage.getItem('all_basketball_games');
+                let gameList = rawData ? JSON.parse(rawData) : [];
+
+                // 저장할 현재 경기 데이터 생성
+                const newGame = {
+                    id: Date.now(), // 고유 ID (식별용)
+                    date: new Date().toLocaleString(), // 저장 시간
+                    history: this.gameHistory, // 쿼터별 상세 기록
+                    finalScore: { 
+                        A: this.teamAScore, 
+                        B: this.teamBScore 
+                    }
+                };
+                this.saveQuarterToHistory();
+                
+                gameList.push(newGame);
+
+                // Save whole data in localStorage
+                localStorage.setItem('all_basketball_games', JSON.stringify(gameList));
+                
+                alert(`경기가 성공적으로 저장되었습니다! (총 ${gameList.length}개의 기록 있음)`);
+            },
+            */
+            async saveFullGame() {
+                // 로그인 정보가 있는지 확인
+                if (!this.teamId) {
+                    alert("로그인이 필요합니다. 팀명을 확인해주세요.");
+                    return;
+                }
+            
+                // 현재 쿼터의 마지막 기록을 history 배열에 추가
+                this.saveQuarterToHistory();
+            
+                // 서버에 저장할 데이터 뭉치 만들기
+                const newGame = {
+                    id: Date.now(),
+                    date: new Date().toLocaleString(),
+                    history: this.gameHistory,
+                    finalScore: { 
+                        A: this.teamAScore, 
+                        B: this.teamBScore 
+                    }
+                };
+            
+                try {
+                    // Firebase 서버에 저장 (경로: teams/팀명/games/게임ID)
+                    const gameRef = window.dbRef(window.db, `teams/${this.teamId}/games/${newGame.id}`);
+                    await window.dbSet(gameRef, newGame);
+                    
+                    alert(`서버 저장 완료! 팀명: ${this.teamId}`);
+                } catch (error) {
+                    console.error("Firebase 저장 에러:", error);
+                    alert("서버 저장에 실패했습니다. 인터넷 연결을 확인하세요.");
+                }
+            },
+
+            exportToJson() {
+                // 저장할 데이터 구조 만들기
+                const dataStr = JSON.stringify(this.gameHistory, null, 2); // 보기 좋게 정렬
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                // 가상의 다운로드 링크 생성
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `basketball_record_${new Date().getTime()}.json`;
+                
+                // 클릭 및 삭제
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            },
+        },
+        mounted() {
+            const urlParams = new URLSearchParams(window.location.search);
+            this.teamId = urlParams.get('teamId');
+            this.teamPassword = urlParams.get('pw');
+    
+            if (this.teamId) {
+                this.loadFromServer();
+            }
         }
     }).mount('#app');
 </script>
