@@ -30,66 +30,99 @@
         .badge { display: inline-block; background: linear-gradient(45deg, #ff6b00, #ffbb00); color: black;
             border-radius: 5px; margin-bottom: 10px; padding: 5px 10px;
             font-size: 0.8rem; font-weight: bold; }
+
+        .login-container { display: flex; margin-top: 50px; gap: 15px; 
+            justify-content: center; align-items: stretch; }
+        .login-btn { width: 80px; background: #333; color: #fff; border: 1px solid #444;
+            padding: 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .login-btn.plus:hover { background: #555; }
         
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-        .standard-btn { width: 50px; background: #333; color: #fff; border: 1px solid #444;
-            padding: 8px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-        .standard-btn.plus:hover { background: #555; }
     </style>
 </head>
 
 <body>
-    <h1>BASKETBALL SCOREBOARD</h1>
+    <div id="app">
+        <h1>BASKETBALL SCOREBOARD</h1>
 
-    <div class="selection-container">
+        <div class="selection-container">
+            <div class="card" @click="checkAccess('basic')">
+                <div class="badge">Free</div>
+                <h2>BASIC</h2>
+                <p>팀별 데이터의 기본 모드</p>
+            </div>
 
-        <div class="card" onclick="login('basic')">
-            <div class="badge">Free</div>
-            <h2>BASIC</h2>
-            <p>농구 점수판의<br>핵심 기능만 담은 기본 모드</p>
+            <div class="card" @click="checkAccess('pro')">
+                <div class="badge">Subscribe</div>
+                <h2>PRO</h2>
+                <p>선수별 데이터의 디테일 모드</p>
+            </div>
         </div>
 
-        <div class="card" onclick="login('pro')">
-            <div class="badge">Subscribe</div>
-            <h2>PRO</h2>
-            <p>선수별 데이터 관리가<br>가능한 디테일 모드</p>
+        <div class="login-container">
+            <template v-if="!isLoggedIn">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <input type="text" v-model="teamId" style="width: 150px; padding: 8px;" placeholder="팀 이름 (ID)">
+                    <input type="password" v-model="teamPassword" style="width: 150px; padding: 8px;" placeholder="비밀번호">
+                </div>
+                <div style="display: flex;">
+                    <button class="login-btn" @click="handleLogin">Login</button>
+                </div>
+            </template>
+
+            <div v-else style="text-align: center; width: 100%; animation: fadeIn 0.5s;">
+                <h3 style="margin: 0; color: #f39c12;">안녕하세요, {{ teamId }}님!</h3>
+                <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">원하시는 모드 카드를 클릭해 주세요.</p>
+            </div>
         </div>
-        
     </div>
 
-    <div class="login-box">
-        <input type="text" id="teamName" placeholder="팀 이름 (ID)">
-        <input type="password" id="teamPass" placeholder="비밀번호">
-        <button class="standard-btn" onclick="login()">기록 시작하기</button>
-    </div>
-
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
     <script>
-        let selectedMode = 'basic'; // 기본값
+        const { createApp } = Vue;
 
-        // 카드를 클릭했을 때 어떤 모드인지 저장하는 함수
-        function setMode(mode) {
-            selectedMode = mode;
-            // 시각적 피드백을 위해 알림을 주거나 카드 테두리를 강조할 수 있습니다.
-            console.log("선택된 모드: " + mode);
-        }
+        createApp({
+            data() {
+                return {
+                    isLoggedIn: false, // 로그인 상태값
+                    teamId: '',        // 입력받은 ID
+                    teamPassword: ''   // 입력받은 비밀번호
+                }
+            },
+            methods: {
+                // [Login] 버튼을 눌렀을 때
+                handleLogin() {
+                    if (!this.teamId || !this.teamPassword) {
+                        alert("팀 이름과 비밀번호를 입력해주세요!");
+                        return;
+                    }
+                    // 성공 처리 (박스 내부가 바뀜)
+                    this.isLoggedIn = true;
+                    console.log("로그인 성공:", this.teamId);
+                },
 
-        function login(mode) {
-            const teamId = document.getElementById('teamName').value;
-            const password = document.getElementById('teamPass').value;
-    
-            if (!teamId || !password) {
-                alert("팀 이름과 비밀번호는 필수입니다!");
-                return;
+                // 카드를 눌렀을 때 (로그인 체크 문지기)
+                checkAccess(mode) {
+                    if (!this.isLoggedIn) {
+                        alert("로그인을 먼저 해주세요!");
+                        return;
+                    }
+
+                    // 로그인 된 상태라면 이동
+                    const targetPage = mode === 'pro' ? 'pro.html' : 'basic.html';
+                    const url = `${targetPage}?teamId=${encodeURIComponent(this.teamId)}&pw=${encodeURIComponent(this.teamPassword)}`;
+                    location.href = url;
+                }
             }
-    
-            // 선택한 모드(basic 또는 pro)에 따라 이동하면서 주소창에 정보 전달
-            const targetPage = mode === 'pro' ? 'pro.html' : 'basic.html';
-            
-            // encodeURIComponent는 한글 팀명 등이 깨지지 않게 해줍니다.
-            location.href = `${targetPage}?teamId=${encodeURIComponent(teamId)}&pw=${encodeURIComponent(password)}`;
-        }
+        }).mount('#app');
     </script>
 
+    <style>
+        /* 부드러운 전환을 위한 애니메이션 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </body>
 </html>

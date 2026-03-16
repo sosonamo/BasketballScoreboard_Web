@@ -454,33 +454,7 @@
                 };
                 this.gameHistory.push(record);
             },
-
-            /* localStorage Save Option
-            saveFullGame() {
-                // 현재 진행 중인 마지막 쿼터 데이터까지 포함해서 저장
-                const rawData = localStorage.getItem('all_basketball_games');
-                let gameList = rawData ? JSON.parse(rawData) : [];
-
-                // 저장할 현재 경기 데이터 생성
-                const newGame = {
-                    id: Date.now(), // 고유 ID (식별용)
-                    date: new Date().toLocaleString(), // 저장 시간
-                    history: this.gameHistory, // 쿼터별 상세 기록
-                    finalScore: { 
-                        A: this.teamAScore, 
-                        B: this.teamBScore 
-                    }
-                };
-                this.saveQuarterToHistory();
-                
-                gameList.push(newGame);
-
-                // Save whole data in localStorage
-                localStorage.setItem('all_basketball_games', JSON.stringify(gameList));
-                
-                alert(`경기가 성공적으로 저장되었습니다! (총 ${gameList.length}개의 기록 있음)`);
-            },
-            */
+            
             async saveFullGame() {
                 // 로그인 정보가 있는지 확인
                 if (!this.teamId) {
