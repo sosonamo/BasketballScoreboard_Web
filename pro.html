@@ -1,515 +1,568 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html class="dark" lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BasketBoard Pro Web</title>
+    <title>Basketball ScoreBoard Pro</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
+        /* --- Standard Setting --- */
         :root {
-            --bg-color: #F0F0F0;
-            --team-pad-bg: #409f49;
-            --clock-pad-bg: #FFD700;
-            --danger-red: #B22222;
-            --success-green: #228B22;
-            --btn-gray: #696969;
-            --border-color: #CCCCCC;
-        }
+            --top-bar-height: 60px;
+            --bottom-bar-height: 50px;
 
+            --bg-color: #121212;
+            --card-bg: #1E1E1E;
+
+            --teamA-color: #FFD700;
+            --teamB-color: #409f49;
+            --danger-red: #B22222;
+            --text-main: #e5e2e1;
+            --text-dim: #AAAAAA;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        
         body {
-            background-color: var(--bg-color);
-            margin: 0;
+            margin: 0; padding: 0;
+            height: 100vh; /* 브라우저 높이 100% */
+            overflow: hidden;
+            background-color: var(--bg-color); color: var(--text-main);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow-x: hidden;
             user-select: none;
         }
 
         #app {
-            display: grid;
-            grid-template-columns: 2fr 1fr 2fr;
-            gap: 15px;
-            padding: 20px;
-            height: 100vh;
-            box-sizing: border-box;
-            min-width: 1200px;
+            display: flex; flex-direction: column;
+            gap: 1.5vw;
+            min-width: 800px; height: 100vh;
+            overflow-y: auto; box-sizing: border-box;
         }
 
-        /* 공통 스타일 */
-        .panel { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .flex-center { display: flex; align-items: center; justify-content: center; }
-        .text-bold { font-weight: bold; }
-        .danger-text { color: red !important; }
-
-        /* --- 사이드 팀 컬럼 --- */
-        .team-column { display: flex; flex-direction: column; gap: 10px; }
-        .team-title-input {
-            width: 100%; font-size: 24px; font-weight: bold; text-align: center;
-            border: 1px solid var(--border-color); border-radius: 5px; padding: 5px;
+        /* --- Top Bar --- */
+        .top-bar {
+            display: flex;
+            width: 100%; height: var(--top-bar-height);
+            flex-shrink: 0; /* 헤더가 찌그러지지 않게 함 */
+            background-color: var(--border-color);
+            justify-content: center; align-items: center;
+            padding: 10px; gap: 15px;
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+        }
+        .menu-bar {
+            display: flex;
+            gap: 30px;
+            margin-left: 50px;
+        }
+        .menu-item {
+            color: var(--text-dim);
+            font-weight: bold;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        .menu-item:hover {
+            color: var(--teamA-color);
         }
 
-        /* 플레이어 리스트 헤더 & 로우 */
-        .player-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .player-table th { background: #eee; padding: 5px; border-bottom: 2px solid #ddd; }
-        .player-table td { padding: 3px; text-align: center; border-bottom: 1px solid #eee; }
-
-        /* 버튼 스타일 */
-        .btn {
-            border: none; border-radius: 4px; padding: 5px; cursor: pointer;
-            font-weight: bold; transition: opacity 0.2s, transform 0.1s;
-        }
-        .btn:hover { opacity: 0.8; }
-        .btn:active { transform: scale(0.95); }
-        .btn-std { background: #eee; width: 40px; }
-        .btn-foul { background: #FFCCCC; color: red; width: 45px; }
-        .btn-rounded { 
-            background: var(--btn-gray); color: white; border-radius: 8px; 
-            padding: 8px 12px; font-size: 14px;
-        }
-
-        /* --- 중앙 컨트롤 컬럼 --- */
-        .control-column { display: flex; flex-direction: column; gap: 15px; }
         
-        /* 로그 데이터그리드 */
-        .log-container {
-            height: 180px; overflow-y: auto; border: 1px solid #999;
-            background: white; font-size: 12px;
+        /* --- Bottom Bar --- */
+        .bottom-bar {
+            display: flex; flex-shrink: 0; 
+            width: 100%; height: var(--bottom-bar-height);
+            background-color: var(--border-color);
+            align-items: center; justify-content: center;
+            gap: 15px; padding: 10px; z-index: 100;
         }
-        .log-table { width: 100%; border-collapse: collapse; }
-        .log-table th { background: gray; color: white; position: sticky; top: 0; }
-        .log-table td { border: 1px solid #eee; text-align: center; padding: 2px; }
+        .opt-btn {
+            padding: 10px; border-radius: 4px; border: none; width: 150px; cursor: pointer;
+            font-size: 14px; font-weight: bold; color: white;
+        }
 
-        /* 클락 패드 */
+
+        /* --- Main --- */
+        .main-grid {
+            flex: 1; display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(360px, 1.5fr) minmax(180px, 1fr);
+            gap: 15px; padding: 20px;
+            overflow-y: auto; box-sizing: border-box
+        }
+
+        /* --- Team Column --- */
+        .team-column { display: flex; flex-direction: column; gap: 15px; width: 100%; height: 100%; overflow: hidden; }
+        .team-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 15px; border-radius: 8px; background: #252525; border: 1px solid var(--border-color);
+        }
+        .team-title-input {
+            background: transparent; border: none; color: white; font-size: 24px; font-weight: bold; width: 100%;
+        }
+
+        /* Card List */
+        .card-list {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 8px;
+        }
+        .card-list::-webkit-scrollbar { width: 5px; }
+        .card-list::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        /* Player Card */
+        .player-card {
+            background: var(--card-bg); border-radius: 6px; padding: 0.9vw;
+            border: 1px solid var(--border-color); transition: all 0.2s;
+        }
+        .player-card:hover { border-color: rgba(255, 255, 255, 0.3); }
+
+        .player-info, .button-grid { 
+            display: grid; grid-template-columns: repeat(5, 1fr); width: 100%;
+            gap: 6px; box-sizing: border-box;
+        }
+        .player-info { margin-bottom: 8px; align-items: center; }
+        .player-no-input, .player-name-input {
+            width: 100%; height: 35px; box-sizing: border-box;
+            background: #2a2a2a; border: 1px solid #444; color: white; 
+            text-align: center; border-radius: 4px; font-weight: bold;
+        }
+        .player-no-input { grid-column: 1; text-align: center; }
+        .player-name-input { grid-column: 2 / 4; text-align: left; padding-left: 10px; }
+        .pts-badge, .fls-badge {
+            display: flex; grid-column: auto; width: 100%;
+            align-items: center; justify-content: center;
+            text-align: center; border-radius: 4px; padding: 0.6vw 0;
+            font-size: 11px; color: var(--text-dim); font-weight: bold;
+        }
+
+        .player-btn {
+            width: 100%; border: none; border-radius: 4px; padding: 0.9vw 0;
+            /* clamp(최소값, 권장값, 최대값) - 화면에 따라 글자 크기가 변함 */
+            font-size: clamp(12px, 0.9vw, 14px); font-weight: bold;
+            cursor: pointer; transition: transform 0.1s, opacity 0.2s; color: white;
+        }
+        .player-btn:active { transform: scale(0.95); }
+
+        /* Team State */
+        .team-sum {
+            padding: 0.9vw; margin-top: auto; 
+            background: var(--card-bg); border-radius: 6px; border: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+
+        /* Team Color */
+        .teamA .btn-pt { background: var(--teamA-color); color: #444; }
+        .teamB .btn-pt { background: var(--teamB-color); }
+        .btn-error { background: var(--danger-red); }
+        .btn-etc { background: #353534; }
+
+
+        /* --- Center Column --- */
+        .control-column {
+            flex: 1; display: flex; flex-direction: column; overflow-y: auto;
+            gap: 15px; height: 100%; padding-right: 8px;}
+        .control-column::-webkit-scrollbar { width: 5px; }
+        .control-column::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        
+        /* Right to Attack */
+        .possession-arrow { font-size: 2.0vw; cursor: pointer; color: #555; transition: 0.3s; }
+        .possession-active { color: red; text-shadow: 0 0 10px red; }
+
+        /* Clock Pad */
         .clock-pad {
-            background: var(--clock-pad-bg); padding: 20px; border-radius: 15px;
+            padding: 20px; border-radius: 15px;
             text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        .time-display { font-size: 80px; font-weight: bold; line-height: 1; margin: 10px 0; }
-        .shot-clock-display { font-size: 100px; font-weight: bold; line-height: 1; color: #555; }
+        .time-display { font-size: 85px; font-weight: bold; line-height: 1; margin: 10px 0; }
+        .shot-clock-display { font-size: 100px; font-weight: bold; line-height: 1; color: #444; }
         .shot-clock-active { color: black; }
+        .danger-text { color: var(--danger-red) !important; }
+
+        .team-pad {
+            color: white; border-radius: 15px; padding: 20px; text-align: center;
+        }
+        .score-row { display: flex; justify-content: space-around; align-items: center; font-size: 90px; font-weight: bold; }
+
+        /* Log Table */
+        .log-container {
+            flex: 1; overflow-y: auto; background: white; border-radius: 10px; border: 1px solid #999; font-size: 12px;
+        }
+        .log-table { width: 100%; border-collapse: collapse; }
+        .log-table th { background: #555; color: white; padding: 8px; position: sticky; top: 0; }
+        .log-table td { text-align: center; border-bottom: 1px solid #eee; padding: 6px;  }
+
 
         /* 팀 스코어 패드 */
         .team-pad {
-            background: var(--team-pad-bg); color: white; border-radius: 15px;
+            color: white; border-radius: 15px;
             padding: 20px; text-align: center;
         }
-        .score-row { display: flex; justify-content: space-around; align-items: center; font-size: 90px; font-weight: bold; }
         .foul-row { display: flex; justify-content: space-around; font-size: 30px; margin-top: 10px; }
         .timeout-container { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
         .timeout-dot { width: 18px; height: 18px; background: lightgray; border-radius: 50%; cursor: pointer; }
         .timeout-dot.used { background: red; box-shadow: 0 0 8px red; }
 
-        /* 하단 고정 옵션 바 */
-        .bottom-bar {
-            position: fixed; bottom: 0; left: 0; width: 100%; background: #333;
-            padding: 10px; display: flex; justify-content: center; gap: 15px;
-            z-index: 100;
-        }
-        .opt-btn { width: 150px; font-size: 14px; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
-
-        /* 공격권 표시 */
-        .possession-arrow { font-size: 40px; cursor: pointer; color: #555; transition: 0.3s; }
-        .possession-active { color: red; text-shadow: 0 0 10px red; }
-
-        /* 스탯 요약 영역 */
-        .team-sum { background: #ddd; font-size: 12px; padding: 5px; margin-top: auto; border-radius: 5px; }
+        
     </style>
 </head>
+
+
 <body>
-
-<div id="app">
-    <div class="team-column">
-        <input v-model="teamA.name" class="team-title-input" placeholder="TEAM A">
-        <div class="panel" style="flex: 1; overflow-y: auto;">
-            <table class="player-table">
-                <thead>
-                    <tr><th>No.</th><th>Score</th><th>Rebound</th><th>AST/STL</th><th>Foul</th><th>TOV</th><th style="background:#ccc">P</th><th style="background:#ccc">S</th></tr>
-                </thead>
-                <tbody>
-                    <tr v-for="p in teamA.players" :key="p.id">
-                        <td><input v-model="p.number" style="width:30px; text-align:center"></td>
-                        <td>
-                            <button class="btn btn-std" @click="addScore(teamA, p, 1)" @contextmenu.prevent="missShot(teamA, p, 1)">1</button>
-                            <button class="btn btn-std" @click="addScore(teamA, p, 2)" @contextmenu.prevent="missShot(teamA, p, 2)">2</button>
-                            <button class="btn btn-std" @click="addScore(teamA, p, 3)" @contextmenu.prevent="missShot(teamA, p, 3)">3</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-std" @click="addStat(teamA, p, 'OffenseRebound', '리바운드(공)')">O</button>
-                            <button class="btn btn-std" @click="addStat(teamA, p, 'DefenseRebound', '리바운드(수)')">D</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-std" @click="addStat(teamA, p, 'Assist', '어시스트')">A</button>
-                            <button class="btn btn-std" @click="addStat(teamA, p, 'Steal', '스틸')">S</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-foul" @click="addFoul(teamA, p, 'Defense')" @contextmenu.prevent="addFoul(teamA, p, 'Offense')">F</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-foul" @click="addStat(teamA, p, 'Turnover', '턴오버')">T</button>
-                        </td>
-                        <td class="text-bold" style="width:25px">{{ p.number }}</td>
-                        <td class="text-bold" style="width:30px">{{ p.score }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="team-sum">
-            A SUM: 1pt({{teamASum.one}}), 2pt({{teamASum.two}}), 3pt({{teamASum.three}}), REB({{teamASum.reb}}), AST({{teamASum.ast}}), Foul({{teamASum.foul}})
-        </div>
-    </div>
-
-    <div class="control-column">
-        <div class="log-container" ref="logBox">
-            <table class="log-table">
-                <thead>
-                    <tr><th width="30">Q</th><th width="50">Time</th><th>Team</th><th width="40">No</th><th>Action</th><th>Detail</th></tr>
-                </thead>
-                <tbody>
-                    <tr v-for="log in logs" :key="log.id">
-                        <td>{{ log.quarter }}</td>
-                        <td>{{ log.time }}</td>
-                        <td>{{ log.team }}</td>
-                        <td>{{ log.player }}</td>
-                        <td>{{ log.action }}</td>
-                        <td>{{ log.detail }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="clock-pad">
-            <div style="display:flex; justify-content: space-between; align-items: center;">
-                <div class="possession-arrow" :class="{'possession-active': isPossessionA}" @click="setPossession('A')">▶</div>
-                <div style="font-size: 24px; font-weight: bold;">{{ currentQuarter }}Q</div>
-                <div class="possession-arrow" :class="{'possession-active': isPossessionB}" @click="setPossession('B')">◀</div>
+    <div id="app">
+        <!-- Header -->
+        <header class="top-bar">
+            <div class="text-2xl font-black text-yellow-400 italic font-['Lexend'] uppercase tracking-tighter">SCOREBOARD PRO</div>
+            <nav class="hidden md:flex gap-8">
+            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-yellow-400 border-b-2 border-yellow-400 pb-1 hover:text-white transition-colors active:scale-95 duration-75" href="#">LIVE SCORE</a>
+            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-zinc-500 hover:text-white transition-colors active:scale-95 duration-75" href="#">ROSTERS</a>
+            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-zinc-500 hover:text-white transition-colors active:scale-95 duration-75" href="#">PLAY-BY-PLAY</a>
+            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-zinc-500 hover:text-white transition-colors active:scale-95 duration-75" href="#">REPLAY</a>
+            </nav>
+            <div class="flex gap-4">
+            <span class="material-symbols-outlined text-zinc-500 cursor-pointer hover:text-white transition-colors" data-icon="broadcast_on_home">broadcast_on_home</span>
+            <span class="material-symbols-outlined text-zinc-500 cursor-pointer hover:text-white transition-colors" data-icon="settings">settings</span>
             </div>
+        </header>
 
-            <div class="time-display" :class="{'danger-text': isGameTimeDanger}">{{ formattedGameTime }}</div>
-            
-            <div style="display:grid; grid-template-columns: 1fr 2fr 1fr; gap: 5px; margin-bottom: 10px;">
-                <button class="btn btn-rounded" @click="adjTime(-60)">-1m</button>
-                <button class="btn btn-rounded" :style="{background: isGameRunning ? '#B22222' : '#228B22'}" @click="toggleGameTimer">
-                    {{ isGameRunning ? 'STOP GAME' : 'START GAME' }}
-                </button>
-                <button class="btn btn-rounded" @click="adjTime(60)">+1m</button>
-                <button class="btn btn-rounded" @click="changeQuarter(-1)">Pre Q</button>
-                <button class="btn btn-rounded" style="grid-column: span 1;" @click="changeQuarter(1)">Next Q</button>
-                <button class="btn btn-rounded" @click="adjTime(1)">+1s</button>
-            </div>
 
-            <hr style="border: 0.5px solid #000;">
+        <!-- Main -->
+        <main class="main-grid">
 
-            <div class="shot-clock-display" :class="{'shot-clock-active': isShotClockActive, 'danger-text': isShotClockDanger}">
-                {{ shotClock }}
-            </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-                <button class="btn btn-rounded" style="background:#228B22" @click="resetShotClock(24)">24s Reset</button>
-                <button class="btn btn-rounded" style="background:#228B22" @click="resetShotClock(14)">14s Reset</button>
-                <button class="btn btn-rounded" style="grid-column: span 2; background: #FF4500" @click="toggleShotClock">
-                    SHOT CLOCK : {{ isShotClockActive ? 'ON' : 'OFF' }}
-                </button>
-            </div>
-        </div>
-
-        <div class="team-pad">
-            <div class="score-row">
-                <span>{{ teamAScore }}</span>
-                <span style="font-size: 60px;">-</span>
-                <span>{{ teamBScore }}</span>
-            </div>
-            <div class="foul-row">
-                <span :class="{'danger-text': teamA.teamFoul >= 4}">{{ teamA.teamFoul }}</span>
-                <span style="font-size: 18px;">TEAM FOUL</span>
-                <span :class="{'danger-text': teamB.teamFoul >= 4}">{{ teamB.teamFoul }}</span>
-            </div>
-            <div class="timeout-container">
-                <div style="display:flex; gap:5px">
-                    <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamA.timeout}" @click="toggleTimeout(teamA, n)"></div>
+            <!-- TeamA Column -->
+            <div class="team-column teamA">
+                <div class="team-header">
+                    <input v-model="teamA.name" class="team-title-input">
+                    <span style="font-size: 12px; color: var(--teamA-color)">HOME</span>
                 </div>
-                <div style="margin: 0 20px; font-weight: bold;">TIMEOUT</div>
-                <div style="display:flex; gap:5px">
-                    <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamB.timeout}" @click="toggleTimeout(teamB, n)"></div>
+                <div class="card-list">
+                    <div v-for="p in teamA.players" :key="p.id" class="player-card">
+                        <div class="player-info">
+                            <input v-model="p.number" class="player-no-input">
+                            <input v-model="p.name" class="player-name-input" placeholder="Name">
+                            <div class="pts-badge">PTS: {{ p.score }}</div>
+                            <div class="fls-badge" :style="{color: p.DefenseFoul + p.OffenseFoul >= 4 ? 'red' : 'var(--text-dim)'}">
+                                FLS: {{ p.DefenseFoul + p.OffenseFoul }}</div>
+                        </div>
+                        <div class="button-grid">
+                            <button class="player-btn btn-pt" @click="addScore(teamA, p, 1)" @contextmenu.prevent="missShot(teamA, p, 1)">+1</button>
+                            <button class="player-btn btn-pt" @click="addScore(teamA, p, 2)" @contextmenu.prevent="missShot(teamA, p, 2)">+2</button>
+                            <button class="player-btn btn-pt" @click="addScore(teamA, p, 3)" @contextmenu.prevent="missShot(teamA, p, 3)">+3</button>
+                            <button class="player-btn btn-error" @click="addFoul(teamA, p, 'Defense')" @contextmenu.prevent="addFoul(teamA, p, 'Offense')">FOUL</button>
+                            <button class="player-btn btn-error" @click="addStat(teamA, p, 'Turnover', 'TOV')">TOV</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamA, p, 'OffenseRebound', 'ORB')">ORB</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamA, p, 'DefenseRebound', 'DRB')">DRB</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamA, p, 'Assist', 'AST')">AST</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamA, p, 'Steal', 'STL')">STL</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamA, p, 'Block', 'BLK')">BLK</button>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="team-sum">
+                    PTS {{ teamAScore }} | FOUL {{ teamASum.sumFoul }} | TOV {{ teamASum.sumAst }} | 
+                    REB {{ teamASum.sumReb }} | AST {{ teamASum.sumAst }} | STL {{ teamASum.sumStl }} | BLK {{ teamASum.sumBlk }}
                 </div>
             </div>
-        </div>
-    </div>
-
-    <div class="team-column">
-        <input v-model="teamB.name" class="team-title-input" placeholder="TEAM B">
-        <div class="panel" style="flex: 1; overflow-y: auto;">
-            <table class="player-table">
-                <thead>
-                    <tr><th style="background:#ccc">S</th><th style="background:#ccc">P</th><th>No.</th><th>Score</th><th>Rebound</th><th>AST/STL</th><th>Foul</th><th>TOV</th></tr>
-                </thead>
-                <tbody>
-                    <tr v-for="p in teamB.players" :key="p.id">
-                        <td class="text-bold" style="width:30px">{{ p.score }}</td>
-                        <td class="text-bold" style="width:25px">{{ p.number }}</td>
-                        <td><input v-model="p.number" style="width:30px; text-align:center"></td>
-                        <td>
-                            <button class="btn btn-std" @click="addScore(teamB, p, 1)" @contextmenu.prevent="missShot(teamB, p, 1)">1</button>
-                            <button class="btn btn-std" @click="addScore(teamB, p, 2)" @contextmenu.prevent="missShot(teamB, p, 2)">2</button>
-                            <button class="btn btn-std" @click="addScore(teamB, p, 3)" @contextmenu.prevent="missShot(teamB, p, 3)">3</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-std" @click="addStat(teamB, p, 'OffenseRebound', '리바운드(공)')">O</button>
-                            <button class="btn btn-std" @click="addStat(teamB, p, 'DefenseRebound', '리바운드(수)')">D</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-std" @click="addStat(teamB, p, 'Assist', '어시스트')">A</button>
-                            <button class="btn btn-std" @click="addStat(teamB, p, 'Steal', '스틸')">S</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-foul" @click="addFoul(teamB, p, 'Defense')" @contextmenu.prevent="addFoul(teamB, p, 'Offense')">F</button>
-                        </td>
-                        <td>
-                            <button class="btn btn-foul" @click="addStat(teamB, p, 'Turnover', '턴오버')">T</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="team-sum">
-            B SUM: 1pt({{teamBSum.one}}), 2pt({{teamBSum.two}}), 3pt({{teamBSum.three}}), REB({{teamBSum.reb}}), AST({{teamBSum.ast}}), Foul({{teamBSum.foul}})
-        </div>
-    </div>
-
-    <div class="bottom-bar">
-        <button class="opt-btn" style="background:#5ab1c6" @click="resetAll">🔄 RESET GAME</button>
-        <button class="opt-btn" style="background:#f96c6c" @click="undo" :disabled="undoStack.length === 0">↩️ UNDO</button>
-        <button class="opt-btn" style="background:#8fc182" @click="saveCsv">💾 SAVE CSV</button>
-    </div>
-</div>
-
-<script>
-    const { createApp, ref, reactive, computed, watch, onMounted } = Vue;
-
-    createApp({
-        setup() {
-            const createTeam = (name, prefix) => reactive({
-                name: name,
-                players: Array.from({ length: 12 }, (_, i) => ({
-                    id: prefix + i,
-                    number: prefix + (i + 1).toString().padStart(2, '0'),
-                    score: 0, one: 0, two: 0, three: 0,
-                    OffenseRebound: 0, DefenseRebound: 0,
-                    Assist: 0, Steal: 0, Block: 0, Turnover: 0,
-                    DefenseFoul: 0, OffenseFoul: 0
-                })),
-                teamFoul: 0,
-                timeout: 0
-            });
-
-            const teamA = createTeam('TEAM A', 'A');
-            const teamB = createTeam('TEAM B', 'B');
             
-            const gameTime = ref(600); // 10분
-            const shotClock = ref(24);
-            const currentQuarter = ref(1);
-            const isGameRunning = ref(false);
-            const isShotClockActive = ref(false);
-            const isPossessionA = ref(false);
-            const isPossessionB = ref(false);
-            const logs = reactive([]);
-            const undoStack = reactive([]);
-            const logBox = ref(null);
 
-            // --- Computed Stats ---
-            const teamAScore = computed(() => teamA.players.reduce((sum, p) => sum + p.score, 0));
-            const teamBScore = computed(() => teamB.players.reduce((sum, p) => sum + p.score, 0));
-            
-            const getTeamSum = (team) => computed(() => ({
-                one: team.players.reduce((s, p) => s + p.one, 0),
-                two: team.players.reduce((s, p) => s + p.two, 0),
-                three: team.players.reduce((s, p) => s + p.three, 0),
-                reb: team.players.reduce((s, p) => s + p.OffenseRebound + p.DefenseRebound, 0),
-                ast: team.players.reduce((s, p) => s + p.Assist, 0),
-                foul: team.players.reduce((s, p) => s + p.DefenseFoul + p.OffenseFoul, 0)
-            }));
+            <!-- Game Column -->
+            <div class="control-column">
 
-            const teamASum = getTeamSum(teamA);
-            const teamBSum = getTeamSum(teamB);
+                <!-- Game Clock -->
+                <div class="clock-pad">
+                    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                        <div class="possession-arrow" :class="{'possession-active': isPossessionA}" @click="setPossession('A')">▶</div>
+                        <div style="font-size: 24px; font-weight: 800;">{{ currentQuarter }} Q</div>
+                        <div class="possession-arrow" :class="{'possession-active': isPossessionB}" @click="setPossession('B')">◀</div>
+                    </div>
+                    <div class="time-display"
+                        :class="{'danger-text': isGameTimeDanger}"
+                        @click="toggleGameTimer" style="cursor: pointer;">
+                        {{ formattedGameTime }}
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                        <button class="player-btn btn-etc" style="background:#444" @click="adjTime(-60)">-1m</button>
+                        <!-- 
+                        <button class="player-btn" :style="{background: isGameRunning ? '#B22222' : '#228B22'}" @click="toggleGameTimer">
+                            {{ isGameRunning ? 'STOP' : 'START' }}
+                        </button>
+                        -->
+                        <button class="player-btn btn-etc" style="background:#444" @click="adjTime(60)">+1m</button>
+                    </div>
+                    <div style="background: #1a1a1a; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #333;">
+                        <div class="shot-clock-display"
+                            :class="{'shot-clock-active': isShotClockActive, 'danger-text': isShotClockDanger}"
+                            @click="toggleShotClock" style="cursor: pointer;">
+                            {{ shotClock }}
+                        </div>
+                        <div style="display:flex; gap: 10px; justify-content: center;">
+                            <button class="player-btn btn-etc" style="background:#228B22; width: 80px;" @click="resetShotClock(24)">24s</button>
+                            <button class="player-btn btn-etc" style="background:#228B22; width: 80px;" @click="resetShotClock(14)">14s</button>
+                            <!-- 
+                            <button class="player-btn btn-etc" style="background:#FF4500; width: 120px;" @click="toggleShotClock">SHOT CLOCK</button>
+                            -->
+                        </div>
+                    </div>
+                </div>
+        
+                <!-- Score / TeamFoul / Timeout -->
+                <div class="team-pad">
+                    <div class="score-row">
+                        <span>{{ teamAScore }}</span>
+                        <span style="opacity: 0.5">-</span>
+                        <span>{{ teamBScore }}</span>
+                    </div>
+                    <div style="display:flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
+                        <div :class="{'danger-text': teamA.teamFoul >= 4}">TEAM FOUL: {{ teamA.teamFoul }}</div>
+                        <div :class="{'danger-text': teamB.teamFoul >= 4}">TEAM FOUL: {{ teamB.teamFoul }}</div>
+                    </div>
+                    <div class="timeout-container">
+                        <div style="display:flex; gap:5px">
+                            <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamA.timeout}" @click="toggleTimeout(teamA, n)"></div>
+                        </div>
+                        <span style="font-weight: bold; margin: 0 15px;">TIMEOUTS</span>
+                        <div style="display:flex; gap:5px">
+                            <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamB.timeout}" @click="toggleTimeout(teamB, n)"></div>
+                        </div>
+                    </div>
+                </div>
 
-            const formattedGameTime = computed(() => {
-                const m = Math.floor(gameTime.value / 60);
-                const s = gameTime.value % 60;
-                return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-            });
+                <!-- Game Log -->
+                <div class="log-container" ref="logBox">
+                    <table class="log-table">
+                        <thead>
+                            <tr><th>Q</th><th>Time</th><th>Team</th><th>No</th><th>Action</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="log in logs" :key="log.id">
+                                <td>{{ log.quarter }}</td>
+                                <td>{{ log.time }}</td>
+                                <td :style="{color: log.team === teamA.name ? 'var(--teamA-color)' : 'var(--teamB-accent)'}">{{ log.team }}</td>
+                                <td>{{ log.player }}</td>
+                                <td>{{ log.action }} ({{log.detail}})</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        
 
-            const isGameTimeDanger = computed(() => gameTime.value <= 10 && gameTime.value > 0);
-            const isShotClockDanger = computed(() => shotClock.value <= 5 && shotClock.value > 0);
+            <!-- TeamB Column -->
+            <div class="team-column teamB">
+                <div class="team-header">
+                    <input v-model="teamB.name" class="team-title-input">
+                    <span style="font-size: 12px; color: var(--teamB-color)">AWAY</span>
+                </div>
+                <div class="card-list">
+                    <div v-for="p in teamB.players" :key="p.id" class="player-card">
+                        <div class="player-info">
+                            <input v-model="p.number" class="player-no-input">
+                            <input v-model="p.name" class="player-name-input" placeholder="Name">
+                            <div class="pts-badge">PTS: {{ p.score }}</div>
+                            <div class="fls-badge" :style="{color: p.DefenseFoul + p.OffenseFoul >= 4 ? 'red' : 'var(--text-dim)'}">
+                                FLS: {{ p.DefenseFoul + p.OffenseFoul }}</div>
+                        </div>
+                        <div class="button-grid">
+                            <button class="player-btn btn-pt" @click="addScore(teamB, p, 1)" @contextmenu.prevent="missShot(teamB, p, 1)">+1</button>
+                            <button class="player-btn btn-pt" @click="addScore(teamB, p, 2)" @contextmenu.prevent="missShot(teamB, p, 2)">+2</button>
+                            <button class="player-btn btn-pt" @click="addScore(teamB, p, 3)" @contextmenu.prevent="missShot(teamB, p, 3)">+3</button>
+                            <button class="player-btn btn-error" @click="addFoul(teamB, p, 'Defense')" @contextmenu.prevent="addFoul(teamB, p, 'Offense')">FOUL</button>
+                            <button class="player-btn btn-error" @click="addStat(teamB, p, 'Turnover', 'TOV')">TOV</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamB, p, 'OffenseRebound', 'ORB')">ORB</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamB, p, 'DefenseRebound', 'DRB')">DRB</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamB, p, 'Assist', 'AST')">AST</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamB, p, 'Steal', 'STL')">STL</button>
+                            <button class="player-btn btn-etc" @click="addStat(teamB, p, 'Block', 'BLK')">BLK</button>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="team-sum">
+                    PTS {{ teamAScore }} | FOUL {{ teamASum.sumFoul }} | TOV {{ teamASum.sumAst }} | 
+                    REB {{ teamASum.sumReb }} | AST {{ teamASum.sumAst }} | STL {{ teamASum.sumStl }} | BLK {{ teamASum.sumBlk }}
+                </div>
+            </div>
+        </main>
 
-            // --- Methods ---
-            const addLog = (teamName, playerNum, action, detail) => {
-                const newLog = {
-                    id: Date.now(),
-                    quarter: currentQuarter.value,
-                    time: formattedGameTime.value,
-                    team: teamName,
-                    player: playerNum,
-                    action: action,
-                    detail: detail
-                };
-                logs.push(newLog);
-                setTimeout(() => { if(logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight; }, 50);
-            };
-
-            const registerUndo = (fn) => {
-                undoStack.push(fn);
-            };
-
-            const undo = () => {
-                if (undoStack.length > 0) {
-                    const action = undoStack.pop();
-                    action();
-                    logs.pop();
-                }
-            };
-
-            const addScore = (team, player, pt) => {
-                player.score += pt;
-                if(pt === 1) player.one++;
-                else if(pt === 2) player.two++;
-                else if(pt === 3) player.three++;
-                
-                addLog(team.name, player.number, '득점성공', `${pt}점`);
-                registerUndo(() => {
-                    player.score -= pt;
-                    if(pt === 1) player.one--;
-                    else if(pt === 2) player.two--;
-                    else if(pt === 3) player.three--;
+        <!-- Footer -->
+        <footer>
+            <div class="bottom-bar">
+                <button class="opt-btn" style="background:#5ab1c6" @click="resetAll">🔄 RESET GAME</button>
+                <button class="opt-btn" style="background:#f96c6c" @click="undo" :disabled="undoStack.length === 0">↩️ UNDO</button>
+                <button class="opt-btn" style="background:#8fc182" @click="saveCsv">💾 SAVE CSV</button>
+            </div>
+        </footer>
+    
+    <script>
+        const { createApp, ref, reactive, computed, watch } = Vue;
+    
+        createApp({
+            setup() {
+                const createTeam = (name, prefix) => reactive({
+                    name: name,
+                    players: Array.from({ length: 12 }, (_, i) => ({
+                        id: prefix + i,
+                        number: prefix + (i + 1).toString().padStart(2, '0'),
+                        score: 0, one: 0, two: 0, three: 0,
+                        DefenseFoul: 0, OffenseFoul: 0, Turnover: 0,
+                        OffenseRebound: 0, DefenseRebound: 0, Assist: 0, Steal: 0, Block: 0                        
+                    })),
+                    teamFoul: 0,
+                    timeout: 0
                 });
-            };
-
-            const missShot = (team, player, pt) => {
-                addLog(team.name, player.number, '득점실패', `${pt}점 시도`);
-                registerUndo(() => {});
-            };
-
-            const addStat = (team, player, field, label) => {
-                player[field]++;
-                addLog(team.name, player.number, label, '+1');
-                registerUndo(() => player[field]--);
-            };
-
-            const addFoul = (team, player, type) => {
-                if (player.DefenseFoul + player.OffenseFoul >= 5) return;
+    
+                const teamA = createTeam('HOME TEAM', 'A');
+                const teamB = createTeam('AWAY TEAM', 'B');
                 
-                if (type === 'Defense') {
-                    player.DefenseFoul++;
-                    team.teamFoul = Math.min(5, team.teamFoul + 1);
-                    addLog(team.name, player.number, '파울', 'Personal');
-                    registerUndo(() => {
-                        player.DefenseFoul--;
-                        team.teamFoul = Math.max(0, team.teamFoul - 1);
+                const gameTime = ref(600);
+                const shotClock = ref(24);
+                const currentQuarter = ref(1);
+                const isGameRunning = ref(false);
+                const isShotClockActive = ref(false);
+                const isPossessionA = ref(false);
+                const isPossessionB = ref(false);
+                const logs = reactive([]);
+                const undoStack = reactive([]);
+                const logBox = ref(null);
+    
+                const teamAScore = computed(() => teamA.players.reduce((sum, p) => sum + p.score, 0));
+                const teamBScore = computed(() => teamB.players.reduce((sum, p) => sum + p.score, 0));
+                
+                const getTeamSum = (team) => computed(() => ({
+                    sumFoul: team.players.reduce((s, p) => s + p.OffenseFoul + p.DefenseFoul, 0),
+                    sumTov: team.players.reduce((s, p) => s + p.Turnover, 0),
+                    sumReb: team.players.reduce((s, p) => s + p.OffenseRebound + p.DefenseRebound, 0),
+                    sumAst: team.players.reduce((s, p) => s + p.Assist, 0),
+                    sumStl: team.players.reduce((s, p) => s + p.Steal, 0),
+                    sumBlk: team.players.reduce((s, p) => s + p.Block, 0)
+                }));
+    
+                const teamASum = getTeamSum(teamA);
+                const teamBSum = getTeamSum(teamB);
+    
+                const formattedGameTime = computed(() => {
+                    const m = Math.floor(gameTime.value / 60);
+                    const s = gameTime.value % 60;
+                    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                });
+    
+                const isGameTimeDanger = computed(() => gameTime.value <= 10 && gameTime.value > 0);
+                const isShotClockDanger = computed(() => shotClock.value <= 5 && shotClock.value > 0);
+    
+                const addLog = (teamName, playerNum, action, detail) => {
+                    logs.push({
+                        id: Date.now(),
+                        quarter: currentQuarter.value,
+                        time: formattedGameTime.value,
+                        team: teamName,
+                        player: playerNum,
+                        action: action,
+                        detail: detail
                     });
-                } else {
-                    player.OffenseFoul++;
-                    addLog(team.name, player.number, '파울', 'Offense');
-                    registerUndo(() => player.OffenseFoul--);
-                }
-            };
+                    setTimeout(() => { if(logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight; }, 50);
+                };
+    
+                const registerUndo = (fn) => undoStack.push(fn);
+                const undo = () => { if (undoStack.length > 0) { undoStack.pop()(); logs.pop(); } };
+    
+                const addScore = (team, player, pt) => {
+                    player.score += pt;
+                    addLog(team.name, player.number, 'Point', pt+'pt');
+                    registerUndo(() => player.score -= pt);
+                };
+    
+                const missShot = (team, player, pt) => {
+                    addLog(team.name, player.number, 'Try', pt+'pt');
+                    registerUndo(() => {});
+                };
+    
+                const addStat = (team, player, field, label) => {
+                    player[field]++;
+                    addLog(team.name, player.number, label, '+1');
+                    registerUndo(() => player[field]--);
+                };
+    
+                const addFoul = (team, player, type) => {
+                    if (player.DefenseFoul + player.OffenseFoul >= 5) return;
 
-            const toggleTimeout = (team, n) => {
-                const prev = team.timeout;
-                if (n === team.timeout) {
-                    team.timeout--;
-                    addLog(team.name, '-', '작전타임', '취소');
-                } else if (n === team.timeout + 1) {
-                    team.timeout++;
-                    addLog(team.name, '-', '작전타임', '사용');
-                    registerUndo(() => team.timeout = prev);
-                }
-            };
+                    const prevTeamFoul = team.teamFoul;
+                    team.teamFoul = Math.min(5, team.teamFoul + 1)
 
-            // --- Timer Logic ---
-            let mainTimer = null;
-            const toggleGameTimer = () => isGameRunning.value = !isGameRunning.value;
-            const toggleShotClock = () => isShotClockActive.value = !isShotClockActive.value;
-            const resetShotClock = (sec) => { shotClock.value = sec; isShotClockActive.value = false; };
-            const adjTime = (v) => gameTime.value = Math.max(0, gameTime.value + v);
-            const setPossession = (t) => {
-                if(t === 'A') { isPossessionA.value = !isPossessionA.value; isPossessionB.value = false; }
-                else { isPossessionB.value = !isPossessionB.value; isPossessionA.value = false; }
-            };
-
-            const playBuzzer = () => {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(400, ctx.currentTime);
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 1.5);
-            };
-
-            const speak = (txt) => {
-                const msg = new SpeechSynthesisUtterance(txt);
-                msg.lang = 'en-US';
-                msg.rate = 1.2;
-                window.speechSynthesis.speak(msg);
-            };
-
-            const changeQuarter = (v) => {
-                currentQuarter.value = Math.max(1, currentQuarter.value + v);
-                gameTime.value = 600;
-                shotClock.value = 24;
-                teamA.teamFoul = 0;
-                teamB.teamFoul = 0;
-                isGameRunning.value = false;
-                if(currentQuarter.value === 3) { teamA.timeout = 0; teamB.timeout = 0; }
-            };
-
-            setInterval(() => {
-                if (isGameRunning.value && gameTime.value > 0) {
-                    gameTime.value--;
-                    
-                    // Shot Clock
-                    if (isShotClockActive.value && shotClock.value > 0) {
-                        shotClock.value--;
-                        if (shotClock.value <= 5 && shotClock.value > 0) speak(shotClock.value);
-                        if (shotClock.value === 0) {
-                            playBuzzer();
-                            isShotClockActive.value = false;
+                    if (type === 'Defense') {
+                        player.DefenseFoul++;
+                        addLog(team.name, player.number, 'Foul', 'Defense');
+                        registerUndo(() => { player.DefenseFoul--; team.teamFoul--; });
+                    } else {
+                        player.OffenseFoul++;
+                        addLog(team.name, player.number, 'Foul', 'Offense');
+                        registerUndo(() => { player.OffenseFoul--; team.teamFoul--; });
+                    }
+                };
+    
+                const toggleTimeout = (team, n) => {
+                    if (n === team.timeout) team.timeout--;
+                    else if (n === team.timeout + 1) {
+                        const prev = team.timeout;
+                        team.timeout++;
+                        addLog(team.name, '-', 'TimeOut', '+1');
+                        registerUndo(() => team.timeout = prev);
+                    }
+                };
+    
+                const toggleGameTimer = () => isGameRunning.value = !isGameRunning.value;
+                const toggleShotClock = () => isShotClockActive.value = !isShotClockActive.value;
+                const resetShotClock = (sec) => { shotClock.value = sec; isShotClockActive.value = false; };
+                const adjTime = (v) => gameTime.value = Math.max(0, gameTime.value + v);
+                const setPossession = (t) => {
+                    if(t === 'A') { isPossessionA.value = !isPossessionA.value; isPossessionB.value = false; }
+                    else { isPossessionB.value = !isPossessionB.value; isPossessionA.value = false; }
+                };
+    
+                const playBuzzer = () => {
+                    const ctx = new AudioContext();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'square'; osc.frequency.setValueAtTime(400, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + 1.5);
+                };
+    
+                const speak = (txt) => {
+                    const msg = new SpeechSynthesisUtterance(txt);
+                    msg.lang = 'en-US'; msg.rate = 1.2;
+                    window.speechSynthesis.speak(msg);
+                };
+    
+                setInterval(() => {
+                    if (isGameRunning.value && gameTime.value > 0) {
+                        gameTime.value--;
+                        if (isShotClockActive.value && shotClock.value > 0) {
+                            shotClock.value--;
+                            if (shotClock.value <= 5 && shotClock.value > 0) speak(shotClock.value);
+                            if (shotClock.value === 0) { playBuzzer(); isShotClockActive.value = false; }
                         }
+                        if (gameTime.value === 0) { playBuzzer(); isGameRunning.value = false; }
+                        else if (gameTime.value <= 5) speak(gameTime.value);
                     }
-
-                    // Game End
-                    if (gameTime.value === 0) {
-                        playBuzzer();
-                        isGameRunning.value = false;
-                    } else if (gameTime.value <= 5) {
-                        speak(gameTime.value);
-                    }
-                }
-            }, 1000);
-
-            const resetAll = () => { if(confirm("초기화하시겠습니까?")) location.reload(); };
-
-            const saveCsv = () => {
-                let csv = "Quarter,Time,Team,Player,Action,Detail\n";
-                logs.forEach(l => {
-                    csv += `${l.quarter},${l.time},${l.team},${l.player},${l.action},${l.detail}\n`;
-                });
-                const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = `GameLog_${new Date().getTime()}.csv`;
-                link.click();
-            };
-
-            return {
-                teamA, teamB, gameTime, shotClock, currentQuarter, isGameRunning, isShotClockActive,
-                logs, undoStack, formattedGameTime, isGameTimeDanger, isShotClockDanger,
-                teamAScore, teamBScore, teamASum, teamBSum, logBox, isPossessionA, isPossessionB,
-                addScore, missShot, addStat, addFoul, toggleTimeout, toggleGameTimer, toggleShotClock,
-                resetShotClock, adjTime, undo, saveCsv, resetAll, changeQuarter, setPossession
-            };
-        }
-    }).mount('#app');
-</script>
-</body>
-</html>
+                }, 1000);
+    
+                const resetAll = () => { if(confirm("초기화?")) location.reload(); };
+                const saveCsv = () => {
+                    let csv = "Quarter,Time,Team,Player,Action,Detail\n";
+                    logs.forEach(l => csv += `${l.quarter},${l.time},${l.team},${l.player},${l.action},${l.detail}\n`);
+                    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement("a");
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `Log_${new Date().getTime()}.csv`;
+                    link.click();
+                };
+    
+                return {
+                    teamA, teamB, gameTime, shotClock, currentQuarter, isGameRunning, isShotClockActive,
+                    logs, undoStack, formattedGameTime, isGameTimeDanger, isShotClockDanger,
+                    teamAScore, teamBScore, teamASum, teamBSum, logBox, isPossessionA, isPossessionB,
+                    addScore, missShot, addStat, addFoul, toggleTimeout, toggleGameTimer, toggleShotClock,
+                    resetShotClock, adjTime, undo, saveCsv, resetAll, setPossession
+                };
+            }
+        }).mount('#app');
+    </script>
+    </body>
+    </html>
