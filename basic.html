@@ -238,6 +238,7 @@
     <!-- Option Bar (under) -->
     <div style="height:50px;"></div>
     <div class="option-section">
+        <button class="option-btn" style="background:#2e7d32;" @click="openDisplay">📺 Display</button>
         <button class="option-btn" style="background:#d32f2f;" @click="resetGame">🔄 Reset</button>
         <button class="option-btn" style="background:#ba9852;" @click="playBuzzer">🚨 Buzzer</button>
         <button class="option-btn" style="background:#1d2967;" @click="saveFullGame">💾 Save</button>
@@ -248,7 +249,7 @@
 
 <script type="module">
     import { initialTimerData, TimerLogic } from './boardLogic.js';
-    import './firebaseConfig.js';
+    // import './firebaseConfig.js';
 
     const { createApp } = Vue;
     createApp({
@@ -385,7 +386,55 @@
                 window.speechSynthesis.speak(message);
             },
 
+            // --- Viewer Diplay --- //
+            openDisplay() {
 
+                if (!this.teamId) {
+                    alert("로그인 후 사용하세요.");
+                    return;
+                }
+            
+                window.open(
+                    `display.html?teamId=${encodeURIComponent(this.teamId)}`,
+                    "display",
+                    "width=1400,height=900"
+                );
+            },
+
+            async syncDisplay() {
+
+                if (!this.teamId) return;
+            
+                const liveData = {
+                    quarter: this.quarter,
+                    gameTimeSec: this.gameTimeSec,
+                    shotClock: this.shotClock,
+            
+                    teamA: {
+                        name: this.teamA.name,
+                        score: this.teamAScore,
+                        foul: this.teamAFoul,
+                        timeout: this.teamA.timeout
+                    },
+            
+                    teamB: {
+                        name: this.teamB.name,
+                        score: this.teamBScore,
+                        foul: this.teamBFoul,
+                        timeout: this.teamB.timeout
+                    }
+                };
+            
+                const liveRef = window.dbRef(
+                    window.db,
+                    `teams/${this.teamId}/liveGame`
+                );
+            
+                await window.dbSet(liveRef, liveData);
+            },
+
+
+            
             // --- 점수 및 파울 (양옆 패널) ---
             toggleTimeout(team, index) {
                 const target = team === 'A' ? this.teamA : this.teamB;
@@ -393,7 +442,9 @@
                 // 현재 켜져 있는 불을 누르면 꺼짐 (타임아웃 사용)
                 if (index === target.timeout) {
                     target.timeout--;
-                    this.stopTimer(); // 작전타임 시 타이머 정지 (선택 사항)
+                    // this.stopTimer(); // 작전타임 시 타이머 정지 (선택 사항)
+                    this.stopGameClock();
+                    this.stopShotClock();
                 } 
                 // 바로 다음 꺼져 있는 불을 누르면 켜짐 (타임아웃 취소)
                 else if (index === target.timeout + 1) {
@@ -510,10 +561,12 @@
             const urlParams = new URLSearchParams(window.location.search);
             this.teamId = urlParams.get('teamId');
             this.teamPassword = urlParams.get('pw');
-    
+            
+            /*
             if (this.teamId) {
                 this.loadFromServer();
             }
+            */
         }
     }).mount('#app');
 </script>

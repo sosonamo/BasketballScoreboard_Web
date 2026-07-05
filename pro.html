@@ -174,10 +174,55 @@
         .shot-clock-active { color: black; }
         .danger-text { color: var(--danger-red) !important; }
 
-        .team-pad {
-            color: white; border-radius: 15px; padding: 20px; text-align: center;
+        /* Score Pad */
+        .score-board-container {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 15px;
         }
-        .score-row { display: flex; justify-content: space-around; align-items: center; font-size: 90px; font-weight: bold; }
+        .team-score-card {
+            padding: 20px;
+            border-radius: 6px; border: 1px solid var(--border-color); 
+            background: #252525;
+            text-align: center;
+        }
+        .team-score-card.home { border-left: 4px solid var(--teamA-color); }
+        .team-score-card.away { border-right: 4px solid var(--teamB-color); }
+        .team-name-label {
+            font-size: 14px; font-weight: bold; color: var(--text-dim);
+            text-transform: uppercase; margin-bottom: 10px;
+        }
+        .main-score-display {
+            font-size: 80px;  font-weight: bold; line-height: 1;
+            margin: 15px 0;
+        }
+        .home .main-score-display { color: var(--teamA-color); }
+        .away .main-score-display { color: var(--teamB-color); }
+
+        /* Time Out */
+        .timeout-label {
+            font-size: 11px; font-weight: bold; color: #555;
+            letter-spacing: 1px;
+        }
+        .timeout-section {
+            display: flex; flex-direction: column;
+            align-items: center;
+            gap: 8px; margin-top: 10px;
+        }
+        .timeout-dot {
+            width: 14px; height: 14px;
+            background-color: #333;
+            border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .timeout-dot.used {
+            background-color: #df881d;
+            box-shadow: 0 0 10px #df881d;
+        }
+        .timeout-dot:hover { background-color: #555; }
+
+        /* Team Foul */
+        .foul-row { display: flex; justify-content: space-around; font-size: 30px; margin-top: 10px; }
+
 
         /* Log Table */
         .log-container {
@@ -187,18 +232,6 @@
         .log-table th { background: #555; color: white; padding: 8px; position: sticky; top: 0; }
         .log-table td { text-align: center; border-bottom: 1px solid #eee; padding: 6px;  }
 
-
-        /* 팀 스코어 패드 */
-        .team-pad {
-            color: white; border-radius: 15px;
-            padding: 20px; text-align: center;
-        }
-        .foul-row { display: flex; justify-content: space-around; font-size: 30px; margin-top: 10px; }
-        .timeout-container { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
-        .timeout-dot { width: 18px; height: 18px; background: lightgray; border-radius: 50%; cursor: pointer; }
-        .timeout-dot.used { background: red; box-shadow: 0 0 8px red; }
-
-        
     </style>
 </head>
 
@@ -302,24 +335,33 @@
                 </div>
         
                 <!-- Score / TeamFoul / Timeout -->
-                <div class="team-pad">
-                    <div class="score-row">
-                        <span>{{ teamAScore }}</span>
-                        <span style="opacity: 0.5">-</span>
-                        <span>{{ teamBScore }}</span>
-                    </div>
-                    <div style="display:flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
+                <div class="score-board-container">
+                    <div class="team-score-card home">
+                        <div class="team-name-label">HOME</div>
+                        <div class="timeout-section">
+                            <div style="display:flex; gap:6px">
+                                <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamA.timeout}" @click="toggleTimeout(teamA, n)"></div>
+                            </div>
+                            <!-- <div class="timeout-label">TIMEOUTS</div> -->
+                        </div>
+                        <div class="main-score-display">{{ teamAScore }}</div>
                         <div :class="{'danger-text': teamA.teamFoul >= 4}">TEAM FOUL: {{ teamA.teamFoul }}</div>
+                    </div>
+                    <div class="team-score-card away">
+                        <div class="team-name-label">AWAY</div>
+                        <div class="timeout-section">
+                            <div style="display:flex; gap:6px">
+                                <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamB.timeout}" @click="toggleTimeout(teamB, n)"></div>
+                            </div>
+                            <!-- <div class="timeout-label">TIMEOUTS</div> -->
+                        </div>
+                        <div class="main-score-display">{{ teamBScore }}</div>
                         <div :class="{'danger-text': teamB.teamFoul >= 4}">TEAM FOUL: {{ teamB.teamFoul }}</div>
                     </div>
-                    <div class="timeout-container">
-                        <div style="display:flex; gap:5px">
-                            <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamA.timeout}" @click="toggleTimeout(teamA, n)"></div>
-                        </div>
-                        <span style="font-weight: bold; margin: 0 15px;">TIMEOUTS</span>
-                        <div style="display:flex; gap:5px">
-                            <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamB.timeout}" @click="toggleTimeout(teamB, n)"></div>
-                        </div>
+
+                    <div style="display:flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
+                        
+                        
                     </div>
                 </div>
 

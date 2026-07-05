@@ -20,5 +20,6 @@ window.dbRef = ref;
 window.dbSet = set;
 window.dbGet = get;
 window.dbChild = child;
+window.dbOnValue = onValue;
 
 console.log("Firebase가 성공적으로 로드되었습니다.");
