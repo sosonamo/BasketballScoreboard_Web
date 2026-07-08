@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basketball Display</title>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script type="module" src="./firebaseConfig.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            background: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        #app {
+            width: 100vw;
+            height: 100vh;
+            display: grid;
+            grid-template-columns: 1fr 1.1fr 1fr;
+            gap: 2vw;
+            padding: 3vw;
+            box-sizing: border-box;
+        }
+
+        .team-panel, .center-panel {
+            background: #202020;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .team-name {
+            font-size: 4vw;
+            font-weight: bold;
+            margin-bottom: 2vw;
+        }
+
+        .score {
+            font-size: 14vw;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .home-score {
+            color: #4fc3f7;
+        }
+
+        .away-score {
+            color: #ff8a65;
+        }
+
+        .sub-info {
+            margin-top: 2vw;
+            font-size: 2vw;
+            color: #aaa;
+        }
+
+        .title {
+            color: #ff9800;
+            font-size: 2vw;
+            font-weight: bold;
+            margin-bottom: 2vw;
+        }
+
+        .quarter {
+            font-size: 3vw;
+            font-weight: bold;
+            margin-bottom: 2vw;
+        }
+
+        .game-time {
+            font-size: 9vw;
+            font-weight: bold;
+            color: #00ff00;
+            line-height: 1;
+            margin-bottom: 3vw;
+        }
+
+        .shot-label {
+            font-size: 1.5vw;
+            color: #999;
+            margin-bottom: 0.5vw;
+        }
+
+        .shot-clock {
+            font-size: 9vw;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .danger {
+            color: #ff3333 !important;
+            text-shadow: 0 0 20px rgba(255, 0, 0, 0.7);
+        }
+
+        .timeout-dots {
+            display: flex;
+            gap: 0.8vw;
+            margin-top: 1vw;
+        }
+
+        .dot {
+            width: 1.2vw;
+            height: 1.2vw;
+            border-radius: 50%;
+            background: #444;
+        }
+
+        .dot.active {
+            background: #ffeb3b;
+            box-shadow: 0 0 12px #ffeb3b;
+        }
+
+        .status {
+            position: fixed;
+            bottom: 1vw;
+            right: 1.5vw;
+            color: #777;
+            font-size: 1vw;
+        }
+    </style>
+</head>
+
+<body>
+<div id="app">
+    <!-- HOME -->
+    <div class="team-panel">
+        <div class="team-name">{{ teamA.name }}</div>
+        <div class="score home-score">{{ teamA.score }}</div>
+
+        <div class="sub-info">TEAM FOUL {{ teamA.foul }}</div>
+
+        <div class="timeout-dots">
+            <div v-for="n in 3" class="dot" :class="{ active: n <= teamA.timeout }"></div>
+        </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="center-panel">
+        <div class="title">Basketball Scoreboard</div>
+
+        <div class="quarter">{{ displayQuarter }}</div>
+
+        <div class="game-time" :class="{ danger: gameTimeSec <= 60 }">
+            {{ formattedGameTime }}
+        </div>
+
+        <div class="shot-label">SHOT CLOCK</div>
+        <div class="shot-clock" :class="{ danger: shotClock <= 5 }">
+            {{ shotClock }}
+        </div>
+    </div>
+
+    <!-- AWAY -->
+    <div class="team-panel">
+        <div class="team-name">{{ teamB.name }}</div>
+        <div class="score away-score">{{ teamB.score }}</div>
+
+        <div class="sub-info">TEAM FOUL {{ teamB.foul }}</div>
+
+        <div class="timeout-dots">
+            <div v-for="n in 3" class="dot" :class="{ active: n <= teamB.timeout }"></div>
+        </div>
+    </div>
+
+    <div class="status">
+        {{ isConnected ? 'LIVE' : 'WAITING...' }}
+    </div>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            teamId: '',
+            isConnected: false,
+
+            quarter: 1,
+            gameTimeSec: 600,
+            shotClock: 24,
+
+            teamA: {
+                name: 'HOME',
+                score: 0,
+                foul: 0,
+                timeout: 0
+            },
+
+            teamB: {
+                name: 'AWAY',
+                score: 0,
+                foul: 0,
+                timeout: 0
+            }
+        }
+    },
+
+    computed: {
+        formattedGameTime() {
+            const m = Math.floor(this.gameTimeSec / 60);
+            const s = this.gameTimeSec % 60;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        },
+
+        displayQuarter() {
+            if (this.quarter <= 4) {
+                return this.quarter + 'Q';
+            }
+            return 'EX' + (this.quarter - 4);
+        }
+    },
+
+    methods: {
+        loadLiveGame() {
+            const params = new URLSearchParams(window.location.search);
+            this.teamId = params.get('teamId');
+
+            if (!this.teamId) {
+                alert('teamId가 없습니다.');
+                return;
+            }
+
+            const waitFirebase = setInterval(() => {
+                if (!window.db || !window.dbRef || !window.dbOnValue) return;
+
+                clearInterval(waitFirebase);
+
+                const liveRef = window.dbRef(
+                    window.db,
+                    `teams/${this.teamId}/liveGame`
+                );
+
+                window.dbOnValue(liveRef, (snapshot) => {
+                    const data = snapshot.val();
+                    if (!data) return;
+
+                    this.isConnected = true;
+
+                    this.quarter = data.quarter ?? 1;
+                    this.gameTimeSec = data.gameTimeSec ?? 600;
+                    this.shotClock = data.shotClock ?? 24;
+
+                    this.teamA = {
+                        name: data.teamA?.name ?? 'HOME',
+                        score: data.teamA?.score ?? 0,
+                        foul: data.teamA?.foul ?? 0,
+                        timeout: data.teamA?.timeout ?? 0
+                    };
+
+                    this.teamB = {
+                        name: data.teamB?.name ?? 'AWAY',
+                        score: data.teamB?.score ?? 0,
+                        foul: data.teamB?.foul ?? 0,
+                        timeout: data.teamB?.timeout ?? 0
+                    };
+                });
+            }, 300);
+        }
+    },
+
+    mounted() {
+        this.loadLiveGame();
+    }
+}).mount('#app');
+</script>
+</body>
+</html>

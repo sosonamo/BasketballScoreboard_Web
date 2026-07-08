@@ -249,7 +249,7 @@
 
 <script type="module">
     import { initialTimerData, TimerLogic } from './boardLogic.js';
-    // import './firebaseConfig.js';
+    import './firebaseConfig.js';
 
     const { createApp } = Vue;
     createApp({
@@ -300,8 +300,12 @@
                 if (this.gameInterval) return;
                 this.isGameRunning = true;
                 this.gameInterval = setInterval(() => {
-                    if (this.gameTimeSec > 0) this.gameTimeSec--;
-                    else this.stopGameClock();
+                    if (this.gameTimeSec > 0){
+                        this.gameTimeSec--;
+                        this.syncDisplay();
+                    } else {
+                        this.stopGameClock();
+                    }
                 }, 1000);
             },
             stopGameClock() {
@@ -321,6 +325,7 @@
                 this.shotInterval = setInterval(() => {
                     if (this.shotClock > 0) {
                         this.shotClock--;
+                        this.syncDisplay();
 
                         if (this.shotClock <= 5 && this.shotClock > 0) {
                             this.speakNumber(this.shotClock); // 5, 4, 3, 2, 1 음성 출력
@@ -375,6 +380,7 @@
                 this.stopGameClock();
                 this.stopShotClock();
                 // alert(`${this.displayQuarter} 시작!`);
+                this.syncDisplay();
             },
 
             // --- Sound --- //
@@ -403,7 +409,7 @@
 
             async syncDisplay() {
 
-                if (!this.teamId) return;
+                if (!this.teamId || !window.db || !window.dbRef || !window.dbSet) return;
             
                 const liveData = {
                     quarter: this.quarter,
@@ -425,15 +431,18 @@
                     }
                 };
             
-                const liveRef = window.dbRef(
-                    window.db,
-                    `teams/${this.teamId}/liveGame`
-                );
-            
-                await window.dbSet(liveRef, liveData);
+                try {
+                    const liveRef = window.dbRef(
+                        window.db,
+                        `teams/${this.teamId}/liveGame`
+                    );
+                
+                    await window.dbSet(liveRef, liveData);
+                
+                } catch (error) {
+                    console.error("syncDisplay 오류:", error);
+                }
             },
-
-
             
             // --- 점수 및 파울 (양옆 패널) ---
             toggleTimeout(team, index) {
@@ -451,10 +460,12 @@
                     target.timeout++;
                 }
                 // 그 외의 경우는 작동하지 않음 (순서대로 켜고 꺼야 함)
+                this.syncDisplay();
             },
             updateScore(team, val) {
                 if (team === 'A') this.teamAScore = Math.max(0, this.teamAScore + val);
                 else this.teamBScore = Math.max(0, this.teamBScore + val);
+                this.syncDisplay();
             },
             updateFoul(team, val) {
                 if (team === 'A') {
@@ -469,12 +480,14 @@
                         this.teamBFoul = newFoul;
                     }
                 }
+                this.syncDisplay();
             },
 
             // --- 시스템 기능 ---
             onGameEnd() { this.stopTimer(); alert("경기 종료!"); },
             onShotClockEnd() { this.stopTimer(); alert("24초 종료!"); },
             resetGame() { if(confirm("초기화할까요?")) location.reload(); },
+
             // Buzzer
             playBuzzer() {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
