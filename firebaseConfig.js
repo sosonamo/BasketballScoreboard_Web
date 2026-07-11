@@ -1,14 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBnCVeGdWtZF0gsKWNi7kyTHIIuhARN-3I",
-    authDomain: "basketball-scoreboard-fe190.firebaseapp.com",
-    databaseURL: "https://basketball-scoreboard-fe190-default-rtdb.asia-southeast1.firebasedatabase.app/",
-    projectId: "basketball-scoreboard-fe190",
-    storageBucket: "basketball-scoreboard-fe190.firebasestorage.app",
-    messagingSenderId: "711030691576",
-    appId: "1:711030691576:web:6530895dfed9cd66c14d0d",
+    apiKey: process.env.APP_API_KEY,
+    authDomain: process.env.APP_AUTH_DOMAIN,
+    databaseURL: process.env.APP_FIREBASE_DATABASE_URL,
+    projectId: process.env.APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.APP_FIREBASE_APP_ID,
   };
 
 const app = initializeApp(firebaseConfig);
