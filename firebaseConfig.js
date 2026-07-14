@@ -1,18 +1,27 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import {
+    getAuth,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged,
+    setPersistence,
+    browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
-    apiKey: process.env.APP_API_KEY,
-    authDomain: process.env.APP_AUTH_DOMAIN,
-    databaseURL: process.env.APP_FIREBASE_DATABASE_URL,
-    projectId: process.env.APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.APP_FIREBASE_APP_ID,
+    apiKey: "AIzaSyBnCVeGdWtZF0gsKWNi7kyTHIIuhARN-3I",
+    authDomain: "basketball-scoreboard-fe190.firebaseapp.com",
+    databaseURL: "https://basketball-scoreboard-fe190-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    projectId: "basketball-scoreboard-fe190",
+    storageBucket: "basketball-scoreboard-fe190.firebasestorage.app",
+    messagingSenderId: "711030691576",
+    appId: "1:711030691576:web:6530895dfed9cd66c14d0d",
   };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
 // 다른 파일에서 쓸 수 있게 전역 변수로 등록하거나 export 합니다.
 window.db = db;
@@ -21,5 +30,13 @@ window.dbSet = set;
 window.dbGet = get;
 window.dbChild = child;
 window.dbOnValue = onValue;
+
+// firebase user authentication 관련 함수들을 전역 변수로 등록
+window.auth = auth;
+window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+window.firebaseSignOut = signOut;
+window.onAuthStateChanged = onAuthStateChanged;
+window.setAuthPersistence = setPersistence;
+window.browserLocalPersistence = browserLocalPersistence;
 
 console.log("Firebase가 성공적으로 로드되었습니다.");

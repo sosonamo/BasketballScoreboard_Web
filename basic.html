@@ -520,11 +520,15 @@
             },
             
             async saveFullGame() {
-                // 로그인 정보가 있는지 확인
-                if (!this.teamId) {
-                    alert("로그인이 필요합니다. 팀명을 확인해주세요.");
+                const user = window.auth?.currentUser;
+
+                if (!user) {
+                    alert("로그인이 필요합니다.");
+                    location.href = "index.html";
                     return;
                 }
+
+                this.teamId = user.uid;
             
                 // 현재 쿼터의 마지막 기록을 history 배열에 추가
                 this.saveQuarterToHistory();
@@ -542,7 +546,7 @@
             
                 try {
                     // Firebase 서버에 저장 (경로: teams/팀명/games/게임ID)
-                    const gameRef = window.dbRef(window.db, `teams/${this.teamId}/games/${newGame.id}`);
+                    const gameRef = window.dbRef(window.db,`teams/${user.uid}/games/${newGame.id}`);
                     await window.dbSet(gameRef, newGame);
                     
                     alert(`서버 저장 완료! 팀명: ${this.teamId}`);

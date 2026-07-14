@@ -61,8 +61,13 @@
         <div class="login-container">
             <template v-if="!isLoggedIn">
                 <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <input type="text" v-model="teamId" style="width: 150px; padding: 8px;" placeholder="팀 이름 (ID)">
-                    <input type="password" v-model="teamPassword" style="width: 150px; padding: 8px;" placeholder="비밀번호">
+                    <input
+                        type="email"
+                        v-model="email"
+                        style="width: 150px; padding: 8px;"
+                        placeholder="이메일"
+                    >
+                    <input type="password" v-model="password" style="width: 150px; padding: 8px;" placeholder="비밀번호">
                 </div>
                 <div style="display: flex;">
                     <button class="login-btn" @click="handleLogin">Login</button>
@@ -70,7 +75,7 @@
             </template>
 
             <div v-else style="text-align: center; width: 100%; animation: fadeIn 0.5s;">
-                <h3 style="margin: 0; color: #f39c12;">안녕하세요, {{ teamId }}님!</h3>
+                <h3 style="margin: 0; color: #f39c12;">안녕하세요, {{ currentUser?.email }}님!!</h3>
                 <p style="margin: 5px 0 0; font-size: 0.9em; color: #ccc;">원하시는 모드 카드를 클릭해 주세요.</p>
             </div>
         </div>
@@ -84,21 +89,49 @@
         createApp({
             data() {
                 return {
-                    isLoggedIn: false, // 로그인 상태값
-                    teamId: '',        // 입력받은 ID
-                    teamPassword: ''   // 입력받은 비밀번호
+                    isLoggedIn: false,
+                    email: '',
+                    // password: '',
+                    currentUser: null,
+                    authReady: false
                 }
             },
             methods: {
                 // [Login] 버튼을 눌렀을 때
-                handleLogin() {
-                    if (!this.teamId || !this.teamPassword) {
-                        alert("팀 이름과 비밀번호를 입력해주세요!");
+                async handleLogin() {
+                    if (!this.email || !this.password) {
+                        alert("이메일과 비밀번호를 입력해주세요.");
                         return;
                     }
-                    // 성공 처리 (박스 내부가 바뀜)
-                    this.isLoggedIn = true;
-                    console.log("로그인 성공:", this.teamId);
+
+                    try {
+                        await window.setAuthPersistence(
+                            window.auth,
+                            window.browserLocalPersistence
+                        );
+
+                        const result = await window.signInWithEmailAndPassword(
+                            window.auth,
+                            this.email,
+                            this.password
+                        );
+
+                        this.currentUser = result.user;
+                        this.isLoggedIn = true;
+                        this.password = "";
+
+                        console.log("로그인 성공:", result.user.uid);
+                    } catch (error) {
+                        console.error("로그인 오류:", error);
+
+                        if (error.code === "auth/invalid-credential") {
+                            alert("이메일 또는 비밀번호가 올바르지 않습니다.");
+                        } else if (error.code === "auth/too-many-requests") {
+                            alert("로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.");
+                        } else {
+                            alert("로그인에 실패했습니다.");
+                        }
+                    }
                 },
 
                 // 카드를 눌렀을 때 (로그인 체크 문지기)
@@ -109,10 +142,52 @@
                     }
 
                     // 로그인 된 상태라면 이동
-                    const targetPage = mode === 'pro' ? 'pro.html' : 'basic.html';
-                    const url = `${targetPage}?teamId=${encodeURIComponent(this.teamId)}&pw=${encodeURIComponent(this.teamPassword)}`;
-                    location.href = url;
+                    const targetPage =
+                        mode === 'pro'
+                            ? 'pro.html'
+                            : 'basic.html';
+
+                    location.href = targetPage;
+                },
+                async handleLogout() {
+                    try {
+                        await window.firebaseSignOut(window.auth);
+
+                        this.currentUser = null;
+                        this.isLoggedIn = false;
+                        this.email = "";
+                        this.password = "";
+                    } catch (error) {
+                        console.error("로그아웃 오류:", error);
+                        alert("로그아웃에 실패했습니다.");
+                    }
                 }
+            },
+            mounted() {
+                const waitFirebase = setInterval(() => {
+                    if (!window.auth || !window.onAuthStateChanged) {
+                        return;
+                    }
+
+                    clearInterval(waitFirebase);
+
+                    window.onAuthStateChanged(
+                        window.auth,
+                        (user) => {
+                            if (!user) {
+                                alert("로그인이 필요합니다.");
+                                location.href = "index.html";
+                                return;
+                            }
+
+                            // 로그인한 사용자의 UID를 팀 데이터 경로로 사용
+                            this.teamId = user.uid;
+                            console.log("Basic 로그인 사용자:", user.email);
+                            console.log("사용할 teamId:", this.teamId);
+                            this.syncDisplay();
+                        }
+                    );
+                }, 100);
             }
         }).mount('#app');
     </script>
