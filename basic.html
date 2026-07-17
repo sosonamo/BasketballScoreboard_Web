@@ -243,6 +243,7 @@
         <button class="option-btn" style="background:#ba9852;" @click="playBuzzer">🚨 Buzzer</button>
         <button class="option-btn" style="background:#1d2967;" @click="saveFullGame">💾 Save</button>
         <button class="option-btn" style="background:#1d2967;" @click="exportToJson">📤 Export</button>
+        <button class="option-btn" style="background:#7b1f1f;" @click="handleLogout">🚪 Logout</button>
     </div>
 
 </div>
@@ -258,6 +259,7 @@
                 ...JSON.parse(JSON.stringify(initialTimerData)),
                 // 팀 데이터 초기화 (HTML의 v-model과 연결)
                 teamId: '',
+                teamName: '',
                 teamPassword: '',
                 teamA: { name: 'HOME', timeout: 0 },
                 teamB: { name: 'AWAY', timeout: 0 },
@@ -507,6 +509,81 @@
                 oscillator.stop(audioCtx.currentTime + 1.5); // 2초 동안 재생
             },
             
+            // teamId를 기반으로 Firebase에서 팀 프로필 로드
+            async loadTeamProfile(uid) {
+                if (!window.db || !window.dbRef || !window.dbOnValue || !window.dbSet) {
+                    throw new Error("Firebase Database가 준비되지 않았습니다.");
+                }
+
+                const userProfileRef = window.dbRef(
+                    window.db,
+                    `users/${uid}`
+                );
+
+                return new Promise((resolve, reject) => {
+                    let unsubscribe = null;
+
+                    unsubscribe = window.dbOnValue(
+                        userProfileRef,
+                        async (snapshot) => {
+                            if (unsubscribe) {
+                                unsubscribe();
+                            }
+
+                            try {
+                                const profile = snapshot.val() || {};
+
+                                let teamName = String(profile.teamName || "").trim();
+
+                                // 아직 팀명이 등록되지 않은 계정은 최초 1회 입력
+                                if (!teamName) {
+                                    teamName = prompt(
+                                        "Firebase에 사용할 팀명을 입력해주세요.",
+                                        ""
+                                    )?.trim();
+
+                                    if (!teamName) {
+                                        alert("팀명이 등록되지 않았습니다.");
+                                        resolve(false);
+                                        return;
+                                    }
+
+                                    await window.dbSet(userProfileRef, {
+                                        email: window.auth.currentUser?.email || "",
+                                        teamName: teamName,
+                                        updatedAt: Date.now()
+                                    });
+                                }
+
+                                /*
+                                * Firebase 경로에 사용할 수 없는 문자
+                                * . # $ [ ] /
+                                * 위 문자가 들어오면 _로 변경
+                                */
+                                const safeTeamName = teamName.replace(/[.#$[\]/]/g, "_");
+
+                                this.teamName = teamName;
+                                this.teamId = safeTeamName;
+
+                                console.log("등록 팀명:", this.teamName);
+                                console.log("Firebase 저장 경로:", this.teamId);
+
+                                resolve(true);
+                            } catch (error) {
+                                reject(error);
+                            }
+                        },
+                        (error) => {
+                            if (unsubscribe) {
+                                unsubscribe();
+                            }
+
+                            reject(error);
+                        }
+                    );
+                });
+            },
+
             // 쿼터 기록을 배열에 담는 내부 함수
             saveQuarterToHistory() {
                 const record = {
@@ -528,7 +605,10 @@
                     return;
                 }
 
-                this.teamId = user.uid;
+                if (!this.teamId) {
+                    alert("등록된 팀명을 찾을 수 없습니다.");
+                    return;
+                }
             
                 // 현재 쿼터의 마지막 기록을 history 배열에 추가
                 this.saveQuarterToHistory();
@@ -537,22 +617,50 @@
                 const newGame = {
                     id: Date.now(),
                     date: new Date().toLocaleString(),
+
+                    teamName: this.teamName,
+                    createdBy: user.uid,
+                    createdByEmail: user.email || "",
+
+                    homeTeam: this.teamA.name,
+                    awayTeam: this.teamB.name,
+
                     history: this.gameHistory,
-                    finalScore: { 
-                        A: this.teamAScore, 
-                        B: this.teamBScore 
+
+                    finalScore: {
+                        A: this.teamAScore,
+                        B: this.teamBScore
                     }
                 };
             
                 try {
                     // Firebase 서버에 저장 (경로: teams/팀명/games/게임ID)
-                    const gameRef = window.dbRef(window.db,`teams/${user.uid}/games/${newGame.id}`);
+                    const gameRef = window.dbRef(
+                        window.db,
+                        `teams/${this.teamId}/games/${newGame.id}`
+                    );
+
                     await window.dbSet(gameRef, newGame);
                     
-                    alert(`서버 저장 완료! 팀명: ${this.teamId}`);
+                    alert(`서버 저장 완료! 팀명: ${this.teamName}}`);
                 } catch (error) {
                     console.error("Firebase 저장 에러:", error);
                     alert("서버 저장에 실패했습니다. 인터넷 연결을 확인하세요.");
+                }
+            },
+            async handleLogout() {
+                const confirmed = confirm("로그아웃하시겠습니까?");
+                if (!confirmed) return;
+
+                try {
+                    this.stopGameClock();
+                    this.stopShotClock();
+
+                    await window.firebaseSignOut(window.auth);
+                    location.href = "index.html";
+                } catch (error) {
+                    console.error("로그아웃 오류:", error);
+                    alert("로그아웃에 실패했습니다.");
                 }
             },
 
@@ -575,15 +683,24 @@
             },
         },
         mounted() {
-            const urlParams = new URLSearchParams(window.location.search);
-            this.teamId = urlParams.get('teamId');
-            this.teamPassword = urlParams.get('pw');
-            
-            /*
-            if (this.teamId) {
-                this.loadFromServer();
-            }
-            */
+            const waitFirebase = setInterval(() => {
+                if (!window.auth || !window.onAuthStateChanged) return;
+
+                clearInterval(waitFirebase);
+
+                window.onAuthStateChanged(window.auth, async (user) => {
+                    if (!user) {
+                        alert("로그인이 필요합니다.");
+                        location.href = "index.html";
+                        return;
+                    }
+
+                    console.log("Basic 로그인 사용자:", user.email);
+
+                    await this.loadTeamProfile(user.uid);
+                    this.syncDisplay();
+                });
+            }, 100);
         }
     }).mount('#app');
 </script>
