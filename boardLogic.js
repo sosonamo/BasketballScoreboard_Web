@@ -9,16 +9,29 @@ export const initialTimerData = {
     isShotClockRunning: false,
     gameInterval: null,
     shotInterval: null,
-    timerInterval: null
+    timerInterval: null,
+    gameDeadline: null,
+    shotDeadline: null
 };
 
 // 타이머 관련 로직 (Timer Logic)
 export const TimerLogic = {
     // 시간 포맷팅 (00:00)
     formatTime(seconds) {
-        const min = Math.floor(seconds / 60);
-        const sec = seconds % 60;
+        const safeSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+        const min = Math.floor(safeSeconds / 60);
+        const sec = safeSeconds % 60;
         return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    },
+
+    // setInterval 호출 횟수가 아니라 실제 시각을 기준으로 남은 시간을 계산합니다.
+    createDeadline(seconds, now = Date.now()) {
+        return now + Math.max(0, Number(seconds) || 0) * 1000;
+    },
+
+    remainingSeconds(deadline, now = Date.now()) {
+        if (!deadline) return 0;
+        return Math.max(0, Math.ceil((deadline - now) / 1000));
     },
 
     // 타이머 시작/정지 토글

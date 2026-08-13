@@ -16,7 +16,7 @@
 
         .card {
             width: 250px; background-color: #1e1e1e; border: 2px solid #333; border-radius: 20px;
-            padding: 40px; margin-bottom: 30; cursor: pointer;
+            padding: 40px; margin-bottom: 30px; cursor: pointer;
             text-align: center; transition: all 0.3s ease; text-decoration: none; color: inherit;
         }
 
@@ -100,6 +100,11 @@
             methods: {
                 // [Login] 버튼을 눌렀을 때
                 async handleLogin() {
+                    if (!this.authReady) {
+                        alert("로그인 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+                        return;
+                    }
+
                     if (!this.email || !this.password) {
                         alert("이메일과 비밀번호를 입력해주세요.");
                         return;
@@ -137,6 +142,11 @@
 
                 // 카드를 눌렀을 때 (로그인 체크 문지기)
                 checkAccess(mode) {
+                    if (!this.authReady) {
+                        alert("로그인 상태를 확인하는 중입니다. 잠시만 기다려주세요.");
+                        return;
+                    }
+
                     if (!this.isLoggedIn) {
                         alert("로그인을 먼저 해주세요!");
                         return;
@@ -165,8 +175,14 @@
                 }
             },
             mounted() {
+                let attempts = 0;
                 const waitFirebase = setInterval(() => {
+                    attempts++;
                     if (!window.auth || !window.onAuthStateChanged) {
+                        if (attempts >= 100) {
+                            clearInterval(waitFirebase);
+                            alert("로그인 서비스를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.");
+                        }
                         return;
                     }
 

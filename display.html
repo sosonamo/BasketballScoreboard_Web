@@ -173,7 +173,7 @@
     </div>
 
     <div class="status">
-        {{ isConnected ? 'LIVE' : 'WAITING...' }}
+        {{ statusText }}
     </div>
 </div>
 
@@ -185,6 +185,10 @@ createApp({
         return {
             teamId: '',
             isConnected: false,
+            hasLiveData: false,
+            unsubscribeConnection: null,
+            unsubscribeLiveGame: null,
+            firebaseWaitInterval: null,
 
             quarter: 1,
             gameTimeSec: 600,
@@ -218,6 +222,11 @@ createApp({
                 return this.quarter + 'Q';
             }
             return 'EX' + (this.quarter - 4);
+        },
+
+        statusText() {
+            if (!this.isConnected) return 'WAITING...';
+            return this.hasLiveData ? 'LIVE' : 'NO DATA';
         }
     },
 
@@ -231,21 +240,34 @@ createApp({
                 return;
             }
 
-            const waitFirebase = setInterval(() => {
-                if (!window.db || !window.dbRef || !window.dbOnValue) return;
+            let attempts = 0;
+            this.firebaseWaitInterval = setInterval(() => {
+                attempts++;
+                if (!window.db || !window.dbRef || !window.dbOnValue) {
+                    if (attempts >= 100) {
+                        clearInterval(this.firebaseWaitInterval);
+                        this.firebaseWaitInterval = null;
+                    }
+                    return;
+                }
 
-                clearInterval(waitFirebase);
+                clearInterval(this.firebaseWaitInterval);
+                this.firebaseWaitInterval = null;
+
+                const connectionRef = window.dbRef(window.db, '.info/connected');
+                this.unsubscribeConnection = window.dbOnValue(connectionRef, (snapshot) => {
+                    this.isConnected = snapshot.val() === true;
+                });
 
                 const liveRef = window.dbRef(
                     window.db,
                     `teams/${this.teamId}/liveGame`
                 );
 
-                window.dbOnValue(liveRef, (snapshot) => {
+                this.unsubscribeLiveGame = window.dbOnValue(liveRef, (snapshot) => {
                     const data = snapshot.val();
+                    this.hasLiveData = !!data;
                     if (!data) return;
-
-                    this.isConnected = true;
 
                     this.quarter = data.quarter ?? 1;
                     this.gameTimeSec = data.gameTimeSec ?? 600;
@@ -271,6 +293,12 @@ createApp({
 
     mounted() {
         this.loadLiveGame();
+    },
+
+    beforeUnmount() {
+        if (this.firebaseWaitInterval) clearInterval(this.firebaseWaitInterval);
+        if (this.unsubscribeConnection) this.unsubscribeConnection();
+        if (this.unsubscribeLiveGame) this.unsubscribeLiveGame();
     }
 }).mount('#app');
 </script>

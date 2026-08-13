@@ -124,7 +124,7 @@
         <!-- Side Panel (Home) -->
         <div class="side-panel">
             
-            <input v-model="teamA.name" class="team-name-input">
+            <input v-model="teamA.name" class="team-name-input" @change="syncDisplay">
 
             <div class="timeout-section">
                 <span class="context-label">TIMEOUT</span>
@@ -198,7 +198,7 @@
     
         <!-- Side Panel (Away) -->
         <div class="side-panel">
-            <input v-model="teamB.name" class="team-name-input">
+            <input v-model="teamB.name" class="team-name-input" @change="syncDisplay">
             
             <div class="timeout-section">
                 <span class="context-label">TIMEOUT</span>
@@ -267,10 +267,9 @@
                 teamBScore: 0,
                 teamAFoul: 0,
                 teamBFoul: 0,
-                gameInterval: null,
-                shotInterval: null,
-                timerInterval: null,
-                gameHistory: []
+                gameHistory: [],
+                authUnsubscribe: null,
+                firebaseWaitInterval: null
             }
         },
         computed: {
@@ -299,20 +298,27 @@
                 else this.startGameClock();
             },
             startGameClock() {
-                if (this.gameInterval) return;
+                if (this.gameInterval || this.gameTimeSec <= 0) return;
                 this.isGameRunning = true;
+                this.gameDeadline = TimerLogic.createDeadline(this.gameTimeSec);
                 this.gameInterval = setInterval(() => {
-                    if (this.gameTimeSec > 0){
-                        this.gameTimeSec--;
+                    const nextTime = TimerLogic.remainingSeconds(this.gameDeadline);
+
+                    if (nextTime !== this.gameTimeSec) {
+                        this.gameTimeSec = nextTime;
                         this.syncDisplay();
-                    } else {
-                        this.stopGameClock();
                     }
-                }, 1000);
+
+                    if (nextTime === 0) {
+                        this.stopGameClock();
+                        this.playBuzzer();
+                    }
+                }, 200);
             },
             stopGameClock() {
                 clearInterval(this.gameInterval);
                 this.gameInterval = null;
+                this.gameDeadline = null;
                 this.isGameRunning = false;
             },
 
@@ -322,26 +328,31 @@
                 else this.startShotClock();
             },
             startShotClock() {
-                if (this.shotInterval) return;
+                if (this.shotInterval || this.shotClock <= 0) return;
                 this.isShotClockRunning = true;
+                this.shotDeadline = TimerLogic.createDeadline(this.shotClock);
                 this.shotInterval = setInterval(() => {
-                    if (this.shotClock > 0) {
-                        this.shotClock--;
+                    const previousTime = this.shotClock;
+                    const nextTime = TimerLogic.remainingSeconds(this.shotDeadline);
+
+                    if (nextTime !== previousTime) {
+                        this.shotClock = nextTime;
                         this.syncDisplay();
 
-                        if (this.shotClock <= 5 && this.shotClock > 0) {
-                            this.speakNumber(this.shotClock); // 5, 4, 3, 2, 1 음성 출력
+                        if (nextTime <= 5 && nextTime > 0) {
+                            this.speakNumber(nextTime); // 5, 4, 3, 2, 1 음성 출력
                         }
-                        if (this.shotClock === 0) {
+                        if (nextTime === 0) {
                             this.playBuzzer();    // 0이 되면 삐~ 소리
                             this.stopShotClock(); // 시계 정지
                         }
                     }
-                }, 1000); // 1000ms = 1초마다 반복
+                }, 200);
             },
             stopShotClock() {
                 clearInterval(this.shotInterval);
                 this.shotInterval = null;
+                this.shotDeadline = null;
                 this.isShotClockRunning = false;
             },
 
@@ -355,6 +366,10 @@
                 } else if (newTime > maxTime) {
                     this.gameTimeSec = maxTime; // 12분을 초과하면 12분으로 고정
                 }
+                if (this.isGameRunning) {
+                    this.gameDeadline = TimerLogic.createDeadline(this.gameTimeSec);
+                }
+                this.syncDisplay();
             },
             modifyShotClock(sec) { // +/- 1초 기능
                 const newTime = this.shotClock + sec;
@@ -364,13 +379,22 @@
                 } else if (newTime > 24) {
                     this.shotClock = 24; // 24초를 초과하려고 하면 24로 고정
                 }
+                if (this.isShotClockRunning) {
+                    this.shotDeadline = TimerLogic.createDeadline(this.shotClock);
+                }
+                this.syncDisplay();
             },
             resetShotClock(sec) {
                 TimerLogic.resetShotClock(this, sec);
+                if (this.isShotClockRunning) {
+                    this.shotDeadline = TimerLogic.createDeadline(this.shotClock);
+                }
+                this.syncDisplay();
             },
             changeQuarter(val) {
                 if (val > 0) TimerLogic.nextQuarter(this);
                 else this.quarter = Math.max(1, this.quarter - 1);
+                this.syncDisplay();
             },
             nextQuarter() {
                 this.saveQuarterToHistory();
@@ -486,9 +510,23 @@
             },
 
             // --- 시스템 기능 ---
-            onGameEnd() { this.stopTimer(); alert("경기 종료!"); },
-            onShotClockEnd() { this.stopTimer(); alert("24초 종료!"); },
-            resetGame() { if(confirm("초기화할까요?")) location.reload(); },
+            resetGame() {
+                if (!confirm("초기화할까요?")) return;
+
+                this.stopGameClock();
+                this.stopShotClock();
+                this.gameTimeSec = 600;
+                this.shotClock = 24;
+                this.quarter = 1;
+                this.teamAScore = 0;
+                this.teamBScore = 0;
+                this.teamAFoul = 0;
+                this.teamBFoul = 0;
+                this.teamA.timeout = 0;
+                this.teamB.timeout = 0;
+                this.gameHistory = [];
+                this.syncDisplay();
+            },
 
             // Buzzer
             playBuzzer() {
@@ -549,6 +587,7 @@
                                     }
 
                                     await window.dbSet(userProfileRef, {
+                                        ...profile,
                                         email: window.auth.currentUser?.email || "",
                                         teamName: teamName,
                                         updatedAt: Date.now()
@@ -593,7 +632,36 @@
                     foulA: this.teamAFoul,
                     foulB: this.teamBFoul
                 };
-                this.gameHistory.push(record);
+                const existingIndex = this.gameHistory.findIndex(
+                    (item) => item.quarterName === record.quarterName
+                );
+
+                if (existingIndex >= 0) {
+                    this.gameHistory.splice(existingIndex, 1, record);
+                } else {
+                    this.gameHistory.push(record);
+                }
+
+                return record;
+            },
+
+            getHistoryWithCurrentQuarter() {
+                const history = this.gameHistory.map((item) => ({ ...item }));
+                const currentRecord = {
+                    quarterName: this.displayQuarter,
+                    scoreA: this.teamAScore,
+                    scoreB: this.teamBScore,
+                    foulA: this.teamAFoul,
+                    foulB: this.teamBFoul
+                };
+                const existingIndex = history.findIndex(
+                    (item) => item.quarterName === currentRecord.quarterName
+                );
+
+                if (existingIndex >= 0) history[existingIndex] = currentRecord;
+                else history.push(currentRecord);
+
+                return history;
             },
             
             async saveFullGame() {
@@ -610,8 +678,7 @@
                     return;
                 }
             
-                // 현재 쿼터의 마지막 기록을 history 배열에 추가
-                this.saveQuarterToHistory();
+                const history = this.getHistoryWithCurrentQuarter();
             
                 // 서버에 저장할 데이터 뭉치 만들기
                 const newGame = {
@@ -625,7 +692,7 @@
                     homeTeam: this.teamA.name,
                     awayTeam: this.teamB.name,
 
-                    history: this.gameHistory,
+                    history,
 
                     finalScore: {
                         A: this.teamAScore,
@@ -641,8 +708,8 @@
                     );
 
                     await window.dbSet(gameRef, newGame);
-                    
-                    alert(`서버 저장 완료! 팀명: ${this.teamName}}`);
+                    this.gameHistory = history;
+                    alert(`서버 저장 완료! 팀명: ${this.teamName}`);
                 } catch (error) {
                     console.error("Firebase 저장 에러:", error);
                     alert("서버 저장에 실패했습니다. 인터넷 연결을 확인하세요.");
@@ -665,8 +732,8 @@
             },
 
             exportToJson() {
-                // 저장할 데이터 구조 만들기
-                const dataStr = JSON.stringify(this.gameHistory, null, 2); // 보기 좋게 정렬
+                const history = this.getHistoryWithCurrentQuarter();
+                const dataStr = JSON.stringify(history, null, 2);
                 const dataBlob = new Blob([dataStr], { type: 'application/json' });
                 
                 // 가상의 다운로드 링크 생성
@@ -683,12 +750,22 @@
             },
         },
         mounted() {
-            const waitFirebase = setInterval(() => {
-                if (!window.auth || !window.onAuthStateChanged) return;
+            let attempts = 0;
+            this.firebaseWaitInterval = setInterval(() => {
+                attempts++;
+                if (!window.auth || !window.onAuthStateChanged) {
+                    if (attempts >= 100) {
+                        clearInterval(this.firebaseWaitInterval);
+                        this.firebaseWaitInterval = null;
+                        alert("Firebase를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.");
+                    }
+                    return;
+                }
 
-                clearInterval(waitFirebase);
+                clearInterval(this.firebaseWaitInterval);
+                this.firebaseWaitInterval = null;
 
-                window.onAuthStateChanged(window.auth, async (user) => {
+                this.authUnsubscribe = window.onAuthStateChanged(window.auth, async (user) => {
                     if (!user) {
                         alert("로그인이 필요합니다.");
                         location.href = "index.html";
@@ -697,10 +774,21 @@
 
                     console.log("Basic 로그인 사용자:", user.email);
 
-                    await this.loadTeamProfile(user.uid);
-                    this.syncDisplay();
+                    try {
+                        const loaded = await this.loadTeamProfile(user.uid);
+                        if (loaded) this.syncDisplay();
+                    } catch (error) {
+                        console.error("팀 프로필 로드 오류:", error);
+                        alert("팀 정보를 불러오지 못했습니다.");
+                    }
                 });
             }, 100);
+        },
+        beforeUnmount() {
+            this.stopGameClock();
+            this.stopShotClock();
+            if (this.firebaseWaitInterval) clearInterval(this.firebaseWaitInterval);
+            if (this.authUnsubscribe) this.authUnsubscribe();
         }
     }).mount('#app');
 </script>
