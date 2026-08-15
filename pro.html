@@ -8,7 +8,6 @@
     <style>
         /* --- Standard Setting --- */
         :root {
-            --top-bar-height: 60px;
             --bottom-bar-height: 50px;
 
             --bg-color: #121212;
@@ -38,34 +37,6 @@
             overflow-y: auto; box-sizing: border-box;
         }
 
-        /* --- Top Bar --- */
-        .top-bar {
-            display: flex;
-            width: 100%; height: var(--top-bar-height);
-            flex-shrink: 0; /* 헤더가 찌그러지지 않게 함 */
-            background-color: var(--border-color);
-            justify-content: center; align-items: center;
-            padding: 10px; gap: 15px;
-            border-bottom: 1px solid var(--border-color);
-            z-index: 1000;
-        }
-        .menu-bar {
-            display: flex;
-            gap: 30px;
-            margin-left: 50px;
-        }
-        .menu-item {
-            color: var(--text-dim);
-            font-weight: bold;
-            text-decoration: none;
-            font-size: 14px;
-            transition: color 0.2s;
-        }
-        .menu-item:hover {
-            color: var(--teamA-color);
-        }
-
-        
         /* --- Bottom Bar --- */
         .option-section {
             display: flex; position: fixed; flex-shrink: 0;
@@ -162,20 +133,93 @@
             gap: 15px; height: 100%; padding-right: 8px;}
         .control-column::-webkit-scrollbar { width: 5px; }
         .control-column::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        .context-label {
+            margin-bottom: 5px;
+            color: #888;
+            font-size: 0.7rem;
+            font-weight: bold;
+            letter-spacing: 0.04em;
+        }
         
         /* Right to Attack */
-        .possession-arrow { font-size: 2.0vw; cursor: pointer; color: #555; transition: 0.3s; }
+        .possession-arrow { font-size: 1.5rem; cursor: pointer; color: #555; transition: 0.3s; }
         .possession-active { color: red; text-shadow: 0 0 10px red; }
 
         /* Clock Pad */
         .clock-pad {
-            padding: 20px; border-radius: 15px;
-            text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 12px;
+            background: #1e1e1e;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
         }
-        .time-display { font-size: 85px; font-weight: bold; line-height: 1; margin: 10px 0; }
-        .shot-clock-display { font-size: 100px; font-weight: bold; line-height: 1; color: #444; }
-        .shot-clock-active { color: black; }
-        .danger-text { color: var(--danger-red) !important; }
+        .quarter-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .quarter-number {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .game-clock-section, .shot-clock-section { text-align: center; }
+        .time-display {
+            margin: 15px 0;
+            color: #00ff00;
+            font-size: 4rem;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .clock-control-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .clock-control-btn, .shot-reset-btn {
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #333;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            padding: 8px 10px;
+            transition: 0.2s;
+        }
+        .clock-control-btn:hover { background: #555; }
+        .shot-clock-panel {
+            padding-top: 4px;
+            text-align: center;
+        }
+        .shot-clock-display {
+            margin: 15px 0 10px;
+            color: white;
+            font-size: 6rem;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .shot-clock-active { color: white; }
+        .shot-clock-controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .shot-reset-btn {
+            width: 80px;
+            border-color: #258325;
+            background: #258325;
+        }
+        .shot-reset-btn:hover { background: #2f9c2f; }
+        .danger-text { color: #ff3333 !important; text-shadow: 0 0 10px rgba(255,51,51,0.5); }
 
         /* Score Pad */
         .score-board-container {
@@ -184,22 +228,38 @@
         }
         .team-score-card {
             padding: 20px;
-            border-radius: 6px; border: 1px solid var(--border-color); 
+            border-radius: 12px; border: 1px solid #333;
             background: #252525;
             text-align: center;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
         }
-        .team-score-card.home { border-left: 4px solid var(--teamA-color); }
-        .team-score-card.away { border-right: 4px solid var(--teamB-color); }
         .team-name-label {
-            font-size: 14px; font-weight: bold; color: var(--text-dim);
-            text-transform: uppercase; margin-bottom: 10px;
+            overflow: hidden;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0;
+            text-overflow: ellipsis;
+            text-transform: uppercase;
+            white-space: nowrap;
         }
         .main-score-display {
-            font-size: 80px;  font-weight: bold; line-height: 1;
-            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            margin: 15px 0 20px;
+            font-size: 5rem;
+            font-weight: bold;
+            line-height: 1;
         }
-        .home .main-score-display { color: var(--teamA-color); }
-        .away .main-score-display { color: var(--teamB-color); }
+        .home .main-score-display { color: #4fc3f7; }
+        .away .main-score-display { color: #ff8a65; }
+        .team-foul-number {
+            margin: 8px 0 20px;
+            font-size: 2.5rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .score-label { margin-top: 18px; }
 
         /* Time Out */
         .timeout-label {
@@ -209,17 +269,18 @@
         .timeout-section {
             display: flex; flex-direction: column;
             align-items: center;
-            gap: 8px; margin-top: 10px;
+            gap: 5px; margin: 30px 0 20px;
         }
         .timeout-dot {
-            width: 14px; height: 14px;
-            background-color: #333;
-            border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.1);
-            cursor: pointer; transition: all 0.3s ease;
+            width: 16px; height: 16px;
+            background-color: #444;
+            border-radius: 50%;
+            cursor: pointer; transition: all 0.2s ease;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
         }
         .timeout-dot.used {
-            background-color: #df881d;
-            box-shadow: 0 0 10px #df881d;
+            background-color: #ffeb3b;
+            box-shadow: 0 0 10px #ffeb3b, inset 0 0 3px rgba(255,255,255,0.8);
         }
         .timeout-dot:hover { background-color: #555; }
 
@@ -241,22 +302,6 @@
 
 <body>
     <div id="app">
-        <!-- Header -->
-        <header class="top-bar">
-            <div class="text-2xl font-black text-yellow-400 italic font-['Lexend'] uppercase tracking-tighter">SCOREBOARD PRO</div>
-            <nav class="hidden md:flex gap-8">
-            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-yellow-400 border-b-2 border-yellow-400 pb-1 hover:text-white transition-colors active:scale-95 duration-75" href="#">LIVE SCORE</a>
-            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-zinc-500 hover:text-white transition-colors active:scale-95 duration-75" href="#">ROSTERS</a>
-            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-zinc-500 hover:text-white transition-colors active:scale-95 duration-75" href="#">PLAY-BY-PLAY</a>
-            <a class="font-['Lexend'] font-bold uppercase tracking-tighter text-zinc-500 hover:text-white transition-colors active:scale-95 duration-75" href="#">REPLAY</a>
-            </nav>
-            <div class="flex gap-4">
-            <span class="material-symbols-outlined text-zinc-500 cursor-pointer hover:text-white transition-colors" data-icon="broadcast_on_home">broadcast_on_home</span>
-            <span class="material-symbols-outlined text-zinc-500 cursor-pointer hover:text-white transition-colors" data-icon="settings">settings</span>
-            </div>
-        </header>
-
-
         <!-- Main -->
         <main class="main-grid">
 
@@ -302,34 +347,38 @@
 
                 <!-- Game Clock -->
                 <div class="clock-pad">
-                    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <div>
+                        <div class="context-label">QUARTER</div>
+                        <div class="quarter-row">
                         <div class="possession-arrow" :class="{'possession-active': isPossessionA}" @click="setPossession('A')">▶</div>
-                        <div style="font-size: 24px; font-weight: 800;">{{ currentQuarter }} Q</div>
+                            <div class="quarter-number">{{ currentQuarter }} Q</div>
                         <div class="possession-arrow" :class="{'possession-active': isPossessionB}" @click="setPossession('B')">◀</div>
+                        </div>
                     </div>
-                    <div class="time-display"
-                        :class="{'danger-text': isGameTimeDanger}"
-                        @click="toggleGameTimer" style="cursor: pointer;">
-                        {{ formattedGameTime }}
+                    <div class="game-clock-section">
+                        <div class="context-label">GAME CLOCK</div>
+                        <div class="time-display"
+                            :class="{'danger-text': isGameTimeDanger}"
+                            @click="toggleGameTimer">
+                            {{ formattedGameTime }}
+                        </div>
+                        <div class="clock-control-grid">
+                            <button class="clock-control-btn" @click="adjTime(-60)">-1m</button>
+                            <button class="clock-control-btn" @click="changeQuarter(-1)">Pre Q</button>
+                            <button class="clock-control-btn" @click="changeQuarter(1)">Next Q</button>
+                            <button class="clock-control-btn" @click="adjTime(60)">+1m</button>
+                        </div>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-                        <button class="player-btn btn-etc" style="background:#444" @click="adjTime(-60)">-1m</button>
-                        <button class="player-btn btn-etc" style="background:#444" @click="changeQuarter(-1)">Pre Q</button>
-                        <button class="player-btn btn-etc" style="background:#444" @click="changeQuarter(1)">Next Q</button>
-                        <button class="player-btn btn-etc" style="background:#444" @click="adjTime(60)">+1m</button>
-                    </div>
-                    <div style="background: #1a1a1a; padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #333;">
+                    <div class="shot-clock-panel">
+                        <div class="context-label">SHOT CLOCK</div>
                         <div class="shot-clock-display"
                             :class="{'shot-clock-active': isShotClockActive, 'danger-text': isShotClockDanger}"
-                            @click="toggleShotClock" style="cursor: pointer;">
+                            @click="toggleShotClock">
                             {{ shotClock }}
                         </div>
-                        <div style="display:flex; gap: 10px; justify-content: center;">
-                            <button class="player-btn btn-etc" style="background:#228B22; width: 80px;" @click="resetShotClock(24)">24s</button>
-                            <button class="player-btn btn-etc" style="background:#228B22; width: 80px;" @click="resetShotClock(14)">14s</button>
-                            <!-- 
-                            <button class="player-btn btn-etc" style="background:#FF4500; width: 120px;" @click="toggleShotClock">SHOT CLOCK</button>
-                            -->
+                        <div class="shot-clock-controls">
+                            <button class="shot-reset-btn" @click="resetShotClock(24)">24</button>
+                            <button class="shot-reset-btn" @click="resetShotClock(14)">14</button>
                         </div>
                     </div>
                 </div>
@@ -337,31 +386,30 @@
                 <!-- Score / TeamFoul / Timeout -->
                 <div class="score-board-container">
                     <div class="team-score-card home">
-                        <div class="team-name-label">HOME</div>
+                        <div class="team-name-label">{{ teamA.name }}</div>
                         <div class="timeout-section">
+                            <div class="context-label">TIMEOUT</div>
                             <div style="display:flex; gap:6px">
                                 <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamA.timeout}" @click="toggleTimeout(teamA, n)"></div>
                             </div>
-                            <!-- <div class="timeout-label">TIMEOUTS</div> -->
                         </div>
+                        <div class="context-label">TEAM FOUL</div>
+                        <div class="team-foul-number" :class="{'danger-text': teamA.teamFoul >= 4}">{{ teamA.teamFoul }}</div>
+                        <div class="context-label score-label">TEAM SCORE</div>
                         <div class="main-score-display">{{ teamAScore }}</div>
-                        <div :class="{'danger-text': teamA.teamFoul >= 4}">TEAM FOUL: {{ teamA.teamFoul }}</div>
                     </div>
                     <div class="team-score-card away">
-                        <div class="team-name-label">AWAY</div>
+                        <div class="team-name-label">{{ teamB.name }}</div>
                         <div class="timeout-section">
+                            <div class="context-label">TIMEOUT</div>
                             <div style="display:flex; gap:6px">
                                 <div v-for="n in 3" :key="n" class="timeout-dot" :class="{used: n <= teamB.timeout}" @click="toggleTimeout(teamB, n)"></div>
                             </div>
-                            <!-- <div class="timeout-label">TIMEOUTS</div> -->
                         </div>
+                        <div class="context-label">TEAM FOUL</div>
+                        <div class="team-foul-number" :class="{'danger-text': teamB.teamFoul >= 4}">{{ teamB.teamFoul }}</div>
+                        <div class="context-label score-label">TEAM SCORE</div>
                         <div class="main-score-display">{{ teamBScore }}</div>
-                        <div :class="{'danger-text': teamB.teamFoul >= 4}">TEAM FOUL: {{ teamB.teamFoul }}</div>
-                    </div>
-
-                    <div style="display:flex; justify-content: space-around; font-size: 14px; margin-bottom: 15px;">
-                        
-                        
                     </div>
                 </div>
 
