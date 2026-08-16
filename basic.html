@@ -250,6 +250,7 @@
 
 <script type="module">
     import { initialTimerData, TimerLogic } from './boardLogic.js';
+    import { createLocalDisplayBridge } from './displayBridge.js';
     import './firebaseConfig.js';
 
     const { createApp } = Vue;
@@ -269,7 +270,9 @@
                 teamBFoul: 0,
                 gameHistory: [],
                 authUnsubscribe: null,
-                firebaseWaitInterval: null
+                firebaseWaitInterval: null,
+                localDisplayBridge: null,
+                localDisplayHeartbeat: null
             }
         },
         computed: {
@@ -306,7 +309,6 @@
 
                     if (nextTime !== this.gameTimeSec) {
                         this.gameTimeSec = nextTime;
-                        this.syncDisplay();
                     }
 
                     if (nextTime === 0) {
@@ -314,12 +316,14 @@
                         this.playBuzzer();
                     }
                 }, 200);
+                this.syncDisplay();
             },
-            stopGameClock() {
+            stopGameClock(shouldPublish = true) {
                 clearInterval(this.gameInterval);
                 this.gameInterval = null;
                 this.gameDeadline = null;
                 this.isGameRunning = false;
+                if (shouldPublish) this.syncDisplay();
             },
 
             // --- 샷클락 제어 ---
@@ -337,7 +341,6 @@
 
                     if (nextTime !== previousTime) {
                         this.shotClock = nextTime;
-                        this.syncDisplay();
 
                         if (nextTime <= 5 && nextTime > 0) {
                             this.speakNumber(nextTime); // 5, 4, 3, 2, 1 음성 출력
@@ -348,12 +351,14 @@
                         }
                     }
                 }, 200);
+                this.syncDisplay();
             },
-            stopShotClock() {
+            stopShotClock(shouldPublish = true) {
                 clearInterval(this.shotInterval);
                 this.shotInterval = null;
                 this.shotDeadline = null;
                 this.isShotClockRunning = false;
+                if (shouldPublish) this.syncDisplay();
             },
 
             // --- Modify Clock
@@ -425,22 +430,30 @@
                     alert("로그인 후 사용하세요.");
                     return;
                 }
+
+                if (!this.localDisplayBridge?.isSupported) {
+                    alert("이 브라우저는 로컬 Display 연결을 지원하지 않습니다.");
+                    return;
+                }
             
                 window.open(
-                    `display.html?teamId=${encodeURIComponent(this.teamId)}`,
+                    `display.html?mode=local&teamId=${encodeURIComponent(this.teamId)}`,
                     "display",
                     "width=1400,height=900"
                 );
+                setTimeout(() => this.syncDisplay(), 100);
             },
 
-            async syncDisplay() {
-
-                if (!this.teamId || !window.db || !window.dbRef || !window.dbSet) return;
-            
-                const liveData = {
+            getLocalDisplayState() {
+                return {
+                    source: 'basic',
                     quarter: this.quarter,
                     gameTimeSec: this.gameTimeSec,
                     shotClock: this.shotClock,
+                    isGameRunning: this.isGameRunning,
+                    isShotClockRunning: this.isShotClockRunning,
+                    gameDeadline: this.isGameRunning ? this.gameDeadline : null,
+                    shotDeadline: this.isShotClockRunning ? this.shotDeadline : null,
             
                     teamA: {
                         name: this.teamA.name,
@@ -456,18 +469,23 @@
                         timeout: this.teamB.timeout
                     }
                 };
-            
-                try {
-                    const liveRef = window.dbRef(
-                        window.db,
-                        `teams/${this.teamId}/liveGame`
-                    );
-                
-                    await window.dbSet(liveRef, liveData);
-                
-                } catch (error) {
-                    console.error("syncDisplay 오류:", error);
-                }
+            },
+
+            initializeLocalDisplay() {
+                if (this.localDisplayBridge) this.localDisplayBridge.close();
+
+                this.localDisplayBridge = createLocalDisplayBridge({
+                    role: 'controller',
+                    getTeamId: () => this.teamId,
+                    getState: () => this.getLocalDisplayState()
+                });
+
+                clearInterval(this.localDisplayHeartbeat);
+                this.localDisplayHeartbeat = setInterval(() => this.syncDisplay(), 5000);
+            },
+
+            syncDisplay() {
+                return this.localDisplayBridge?.publish() || false;
             },
             
             // --- 점수 및 파울 (양옆 패널) ---
@@ -776,7 +794,10 @@
 
                     try {
                         const loaded = await this.loadTeamProfile(user.uid);
-                        if (loaded) this.syncDisplay();
+                        if (loaded) {
+                            this.initializeLocalDisplay();
+                            this.syncDisplay();
+                        }
                     } catch (error) {
                         console.error("팀 프로필 로드 오류:", error);
                         alert("팀 정보를 불러오지 못했습니다.");
@@ -785,10 +806,12 @@
             }, 100);
         },
         beforeUnmount() {
-            this.stopGameClock();
-            this.stopShotClock();
+            this.stopGameClock(false);
+            this.stopShotClock(false);
             if (this.firebaseWaitInterval) clearInterval(this.firebaseWaitInterval);
             if (this.authUnsubscribe) this.authUnsubscribe();
+            if (this.localDisplayHeartbeat) clearInterval(this.localDisplayHeartbeat);
+            if (this.localDisplayBridge) this.localDisplayBridge.close();
         }
     }).mount('#app');
 </script>
