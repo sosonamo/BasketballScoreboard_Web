@@ -53,6 +53,60 @@
         }
         .option-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+        /* --- Game Setup --- */
+        .setup-overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            box-sizing: border-box; padding: 18px;
+            background: rgba(10, 10, 10, 0.98);
+        }
+        .setup-modal {
+            width: min(940px, calc(100vw - 36px)); max-height: calc(100vh - 36px);
+            display: flex; flex-direction: column; box-sizing: border-box;
+            padding: 22px; overflow: hidden;
+            border: 1px solid #444; border-radius: 14px; background: #1e1e1e;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+        }
+        .setup-modal h2 { margin: 0 0 5px; color: #ff9800; text-align: center; }
+        .setup-description { margin: 0 0 14px; color: #aaa; text-align: center; font-size: 12px; }
+        .setup-rosters {
+            min-height: 0; display: grid; grid-template-columns: 1fr 1fr;
+            gap: 14px; overflow-y: auto;
+        }
+        .setup-team-card {
+            display: flex; flex-direction: column; gap: 10px;
+            padding: 14px; border: 1px solid var(--border-color); border-radius: 9px; background: #252525;
+        }
+        .setup-team-label { font-size: 11px; font-weight: bold; }
+        .setup-input {
+            width: 100%; box-sizing: border-box; padding: 9px 10px;
+            border: 1px solid #555; border-radius: 6px; background: #303030;
+            color: white; font-size: 13px;
+        }
+        .setup-team-name { font-size: 17px; font-weight: bold; }
+        .setup-player-list { display: flex; flex-direction: column; gap: 6px; }
+        .setup-player-row {
+            display: grid; grid-template-columns: 26px 80px minmax(100px, 1fr) 64px;
+            align-items: center; gap: 6px;
+        }
+        .setup-player-index { color: #777; font-size: 11px; text-align: center; }
+        .starter-check {
+            display: flex; align-items: center; justify-content: center; gap: 4px;
+            height: 100%; border: 1px solid #555; border-radius: 5px;
+            color: #888; cursor: pointer; font-size: 9px; font-weight: bold;
+        }
+        .starter-check.checked { border-color: #2e8b57; background: #174d31; color: white; }
+        .starter-check input { margin: 0; accent-color: #2e8b57; }
+        .setup-start-btn {
+            flex-shrink: 0; width: 100%; margin-top: 16px; padding: 12px;
+            border: none; border-radius: 7px; background: #e67e22;
+            color: white; cursor: pointer; font-size: 15px; font-weight: bold;
+        }
+        .setup-start-btn:hover { background: #f39c12; }
+        @media (max-width: 720px) {
+            .setup-rosters { grid-template-columns: 1fr; }
+        }
+
 
         /* --- Main --- */
         .main-grid {
@@ -338,8 +392,57 @@
 
 <body>
     <div id="app">
+        <div v-if="!setupComplete" class="setup-overlay">
+            <form class="setup-modal" @submit.prevent="completeGameSetup">
+                <h2>Pro 경기 설정</h2>
+                <p class="setup-description">팀명과 선수 명단을 입력하고, 각 팀의 스타팅 5명을 선택하세요.</p>
+                <div class="setup-rosters">
+                    <section class="setup-team-card">
+                        <label class="setup-team-label" style="color: var(--teamA-color)" for="pro-home-name">HOME TEAM</label>
+                        <input id="pro-home-name" v-model.trim="teamA.name" class="setup-input setup-team-name" required autocomplete="off">
+                        <div class="setup-player-list">
+                            <div v-for="(p, index) in teamA.players" :key="p.id" class="setup-player-row">
+                                <span class="setup-player-index">{{ index + 1 }}</span>
+                                <input v-model.trim="p.number" class="setup-input" aria-label="HOME 선수 번호" placeholder="번호" autocomplete="off">
+                                <input v-model.trim="p.name" class="setup-input" aria-label="HOME 선수 이름" placeholder="선수 이름" autocomplete="off">
+                                <label class="starter-check" :class="{checked: p.isOnCourt}">
+                                    <input
+                                        :checked="p.isOnCourt"
+                                        type="checkbox"
+                                        aria-label="HOME 스타팅"
+                                        @change="setStartingPlayer(teamA, p, $event)"
+                                    >
+                                    START
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="setup-team-card">
+                        <label class="setup-team-label" style="color: var(--teamB-color)" for="pro-away-name">AWAY TEAM</label>
+                        <input id="pro-away-name" v-model.trim="teamB.name" class="setup-input setup-team-name" required autocomplete="off">
+                        <div class="setup-player-list">
+                            <div v-for="(p, index) in teamB.players" :key="p.id" class="setup-player-row">
+                                <span class="setup-player-index">{{ index + 1 }}</span>
+                                <input v-model.trim="p.number" class="setup-input" aria-label="AWAY 선수 번호" placeholder="번호" autocomplete="off">
+                                <input v-model.trim="p.name" class="setup-input" aria-label="AWAY 선수 이름" placeholder="선수 이름" autocomplete="off">
+                                <label class="starter-check" :class="{checked: p.isOnCourt}">
+                                    <input
+                                        :checked="p.isOnCourt"
+                                        type="checkbox"
+                                        aria-label="AWAY 스타팅"
+                                        @change="setStartingPlayer(teamB, p, $event)"
+                                    >
+                                    START
+                                </label>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <button class="setup-start-btn" type="submit">점수판 시작</button>
+            </form>
+        </div>
         <!-- Main -->
-        <main class="main-grid">
+        <main v-show="setupComplete" class="main-grid">
 
             <!-- TeamA Column -->
             <div class="team-column teamA">
@@ -545,8 +648,8 @@
         </main>
 
         <!-- Option Bar (under) -->
-        <div style="height:50px;"></div>
-        <div class="option-section">
+        <div v-show="setupComplete" style="height:50px;"></div>
+        <div v-show="setupComplete" class="option-section">
             <button class="option-btn" style="background:#2e7d32;" @click="openDisplay">📺 외부 모니터</button>
             <button class="option-btn" style="background:#d32f2f;" @click="resetGame">🔄 Reset</button>
             <button class="option-btn" style="background:#555;" @click="undo" :disabled="undoStack.length === 0">↩️ Undo</button>
@@ -603,11 +706,13 @@
                 const isPossessionA = ref(false);
                 const isPossessionB = ref(false);
                 const logs = reactive([]);
+                const lineupHistory = reactive([]);
                 const undoStack = reactive([]);
                 const logBox = ref(null);
                 const teamId = ref('');
                 const teamName = ref('');
                 const currentUser = ref(null);
+                const setupComplete = ref(false);
 
                 let logSequence = 0;
                 let gameDeadline = null;
@@ -619,6 +724,10 @@
                 let localDisplayBridge = null;
                 let localDisplayHeartbeat = null;
                 let presentationDisplayBridge = null;
+                let lineupEventSequence = 0;
+                let lineupPersistTimer = null;
+                let gameSessionId = createGameSessionId();
+                let gameSessionStartedAt = Date.now();
 
                 const teamAScore = computed(() => teamA.players.reduce((sum, p) => sum + p.score, 0));
                 const teamBScore = computed(() => teamB.players.reduce((sum, p) => sum + p.score, 0));
@@ -671,8 +780,76 @@
                     logs.pop();
                 };
 
-                const moveToBench = (player) => {
+                function createGameSessionId() {
+                    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+                    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                }
+
+                const persistLineupHistory = async () => {
+                    if (!teamId.value || !currentUser.value || !window.db || !window.dbRef || !window.dbSet) {
+                        return false;
+                    }
+
+                    try {
+                        const sessionRef = window.dbRef(
+                            window.db,
+                            `teams/${teamId.value}/lineupSessions/${gameSessionId}`
+                        );
+                        await window.dbSet(sessionRef, {
+                            sessionId: gameSessionId,
+                            createdAt: gameSessionStartedAt,
+                            updatedAt: Date.now(),
+                            createdBy: currentUser.value.uid,
+                            createdByEmail: currentUser.value.email || '',
+                            homeTeam: teamA.name,
+                            awayTeam: teamB.name,
+                            events: JSON.parse(JSON.stringify(lineupHistory))
+                        });
+                        return true;
+                    } catch (error) {
+                        console.error('라인업 기록 Firebase 저장 오류:', error);
+                        return false;
+                    }
+                };
+
+                const queueLineupPersistence = () => {
+                    clearTimeout(lineupPersistTimer);
+                    lineupPersistTimer = setTimeout(() => persistLineupHistory(), 150);
+                };
+
+                const recordLineupEvent = (team, player, action, reason = 'SUBSTITUTION') => {
+                    lineupHistory.push({
+                        id: `${Date.now()}_${++lineupEventSequence}`,
+                        recordedAt: new Date().toISOString(),
+                        timestamp: Date.now(),
+                        quarter: currentQuarter.value,
+                        gameTime: formattedGameTime.value,
+                        gameTimeSec: gameTime.value,
+                        team: team.name,
+                        playerId: player.id,
+                        playerNumber: player.number,
+                        playerName: player.name,
+                        action,
+                        reason
+                    });
+                };
+
+                const recordStartingLineup = () => {
+                    [teamA, teamB].forEach((team) => {
+                        team.players
+                            .filter((player) => player.isOnCourt)
+                            .forEach((player) => recordLineupEvent(team, player, 'IN', 'STARTER'));
+                    });
+                    queueLineupPersistence();
+                };
+
+                const moveToBench = (team, player) => {
+                    if (!player.isOnCourt) return;
                     player.isOnCourt = false;
+                    if (setupComplete.value) {
+                        recordLineupEvent(team, player, 'OUT');
+                        queueLineupPersistence();
+                    }
                 };
 
                 const moveToCourt = (team, player) => {
@@ -682,11 +859,49 @@
                         return;
                     }
                     player.isOnCourt = true;
+                    if (setupComplete.value) {
+                        recordLineupEvent(team, player, 'IN');
+                        queueLineupPersistence();
+                    }
                 };
 
                 const togglePlayerCourt = (team, player) => {
-                    if (player.isOnCourt) moveToBench(player);
+                    if (player.isOnCourt) moveToBench(team, player);
                     else moveToCourt(team, player);
+                };
+
+                const setStartingPlayer = (team, player, event) => {
+                    const shouldStart = event.target.checked;
+                    const starterCount = team.players.filter((item) => item.isOnCourt).length;
+                    if (shouldStart && !player.isOnCourt && starterCount >= 5) {
+                        event.target.checked = false;
+                        alert('스타팅 선수는 팀당 최대 5명입니다.');
+                        return;
+                    }
+                    player.isOnCourt = shouldStart;
+                };
+
+                const completeGameSetup = () => {
+                    teamA.name = teamA.name.trim() || 'HOME TEAM';
+                    teamB.name = teamB.name.trim() || 'AWAY TEAM';
+                    [...teamA.players, ...teamB.players].forEach((player) => {
+                        player.number = String(player.number || '').trim();
+                        player.name = String(player.name || '').trim();
+                    });
+
+                    const invalidTeam = [teamA, teamB].find((team) => {
+                        const starters = team.players.filter((player) => player.isOnCourt);
+                        return starters.length !== 5
+                            || starters.some((player) => !player.number || !player.name);
+                    });
+                    if (invalidTeam) {
+                        alert(`${invalidTeam.name}: 스타팅 선수 5명의 번호와 이름을 모두 입력해주세요.`);
+                        return;
+                    }
+
+                    setupComplete.value = true;
+                    recordStartingLineup();
+                    queueSyncDisplay();
                 };
 
                 const addScore = (team, player, point) => {
@@ -1008,6 +1223,8 @@
                     teamA: JSON.parse(JSON.stringify(teamA)),
                     teamB: JSON.parse(JSON.stringify(teamB)),
                     logs: JSON.parse(JSON.stringify(logs)),
+                    lineupSessionId: gameSessionId,
+                    lineupHistory: JSON.parse(JSON.stringify(lineupHistory)),
                     finalScore: { A: teamAScore.value, B: teamBScore.value }
                 });
 
@@ -1019,6 +1236,7 @@
 
                     const gameData = buildGameData();
                     try {
+                        await persistLineupHistory();
                         const gameRef = window.dbRef(
                             window.db,
                             `teams/${teamId.value}/games/${gameData.id}`
@@ -1079,6 +1297,11 @@
                     resetTeamStats(teamA);
                     resetTeamStats(teamB);
                     logs.splice(0);
+                    lineupHistory.splice(0);
+                    gameSessionId = createGameSessionId();
+                    gameSessionStartedAt = Date.now();
+                    lineupEventSequence = 0;
+                    recordStartingLineup();
                     undoStack.splice(0);
                     queueSyncDisplay();
                 };
@@ -1130,6 +1353,9 @@
                                     return;
                                 }
                                 initializeLocalDisplay();
+                                if (setupComplete.value && lineupHistory.length) {
+                                    queueLineupPersistence();
+                                }
                                 queueSyncDisplay();
                             } catch (error) {
                                 console.error('팀 프로필 로드 오류:', error);
@@ -1146,6 +1372,7 @@
                     clearInterval(clockInterval);
                     clearInterval(firebaseWaitInterval);
                     clearTimeout(syncTimer);
+                    clearTimeout(lineupPersistTimer);
                     if (authUnsubscribe) authUnsubscribe();
                     clearInterval(localDisplayHeartbeat);
                     if (localDisplayBridge) localDisplayBridge.close();
@@ -1155,12 +1382,14 @@
                 return {
                     teamA,
                     teamB,
+                    setupComplete,
                     gameTime,
                     shotClock,
                     currentQuarter,
                     isGameRunning,
                     isShotClockActive,
                     logs,
+                    lineupHistory,
                     undoStack,
                     formattedGameTime,
                     isGameTimeDanger,
@@ -1183,6 +1412,8 @@
                     moveToBench,
                     moveToCourt,
                     togglePlayerCourt,
+                    setStartingPlayer,
+                    completeGameSetup,
                     toggleTimeout,
                     toggleGameTimer,
                     toggleShotClock,
