@@ -177,7 +177,10 @@
 
 <script type="module">
 import { TimerLogic } from './boardLogic.js';
-import { createLocalDisplayBridge } from './displayBridge.js';
+import {
+    createLocalDisplayBridge,
+    createPresentationReceiverBridge
+} from './displayBridge.js';
 
 const { createApp } = Vue;
 
@@ -191,6 +194,7 @@ createApp({
             hasLiveData: false,
             isLocalSupported: true,
             localDisplayBridge: null,
+            presentationReceiverBridge: null,
             localTickInterval: null,
             localStateRequestInterval: null,
             unsubscribeConnection: null,
@@ -301,19 +305,25 @@ createApp({
         },
 
         loadLocalGame() {
+            this.presentationReceiverBridge = createPresentationReceiverBridge({
+                onState: (state) => this.applyLiveState(state)
+            });
             this.localDisplayBridge = createLocalDisplayBridge({
                 role: 'display',
                 getTeamId: () => this.teamId,
                 onState: (state) => this.applyLiveState(state)
             });
 
-            this.isLocalSupported = this.localDisplayBridge.isSupported;
+            this.isLocalSupported = this.localDisplayBridge.isSupported
+                || this.presentationReceiverBridge.isSupported;
             if (!this.isLocalSupported) return;
 
             // 표시 화면이 나중에 열려도 컨트롤러가 현재 상태를 다시 보내도록 요청합니다.
-            this.localDisplayBridge.requestState();
+            if (this.localDisplayBridge.isSupported) this.localDisplayBridge.requestState();
             this.localStateRequestInterval = setInterval(() => {
-                if (!this.hasLiveData) this.localDisplayBridge?.requestState();
+                if (!this.hasLiveData && this.localDisplayBridge?.isSupported) {
+                    this.localDisplayBridge.requestState();
+                }
             }, 1000);
 
             // 메시지를 매초 받을 필요 없이 동일한 deadline으로 화면에서 직접 계산합니다.
@@ -378,6 +388,7 @@ createApp({
         if (this.localTickInterval) clearInterval(this.localTickInterval);
         if (this.localStateRequestInterval) clearInterval(this.localStateRequestInterval);
         if (this.localDisplayBridge) this.localDisplayBridge.close();
+        if (this.presentationReceiverBridge) this.presentationReceiverBridge.close();
         if (this.firebaseWaitInterval) clearInterval(this.firebaseWaitInterval);
         if (this.unsubscribeConnection) this.unsubscribeConnection();
         if (this.unsubscribeLiveGame) this.unsubscribeLiveGame();

@@ -238,7 +238,7 @@
     <!-- Option Bar (under) -->
     <div style="height:50px;"></div>
     <div class="option-section">
-        <button class="option-btn" style="background:#2e7d32;" @click="openDisplay">📺 Display</button>
+        <button class="option-btn" style="background:#2e7d32;" @click="openDisplay">📺 외부 모니터</button>
         <button class="option-btn" style="background:#d32f2f;" @click="resetGame">🔄 Reset</button>
         <button class="option-btn" style="background:#ba9852;" @click="playBuzzer">🚨 Buzzer</button>
         <button class="option-btn" style="background:#1d2967;" @click="saveFullGame">💾 Save</button>
@@ -250,7 +250,10 @@
 
 <script type="module">
     import { initialTimerData, TimerLogic } from './boardLogic.js';
-    import { createLocalDisplayBridge } from './displayBridge.js';
+    import {
+        createLocalDisplayBridge,
+        createPresentationControllerBridge
+    } from './displayBridge.js';
     import './firebaseConfig.js';
 
     const { createApp } = Vue;
@@ -272,7 +275,8 @@
                 authUnsubscribe: null,
                 firebaseWaitInterval: null,
                 localDisplayBridge: null,
-                localDisplayHeartbeat: null
+                localDisplayHeartbeat: null,
+                presentationDisplayBridge: null
             }
         },
         computed: {
@@ -424,23 +428,46 @@
             },
 
             // --- Viewer Diplay --- //
-            openDisplay() {
+            async openDisplay() {
 
                 if (!this.teamId) {
                     alert("로그인 후 사용하세요.");
                     return;
                 }
 
-                if (!this.localDisplayBridge?.isSupported) {
-                    alert("이 브라우저는 로컬 Display 연결을 지원하지 않습니다.");
+                const displayUrl = new URL('display.html', location.href);
+                displayUrl.searchParams.set('mode', 'local');
+                displayUrl.searchParams.set('teamId', this.teamId);
+
+                if (this.presentationDisplayBridge?.isSupported) {
+                    try {
+                        await this.presentationDisplayBridge.start(displayUrl.href);
+                        this.syncDisplay();
+                        return;
+                    } catch (error) {
+                        console.warn('외부 모니터 연결 실패:', error);
+                        if (error?.name === 'NotAllowedError') return;
+                    }
+                }
+
+                const isMobile = navigator.userAgentData?.mobile === true
+                    || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                if (isMobile) {
+                    alert(
+                        '현재 휴대폰/브라우저는 외부 화면 분리 출력을 지원하지 않습니다.\n\n' +
+                        'HDMI 미러링에서는 휴대폰과 모니터에 서로 다른 화면을 표시할 수 없습니다. ' +
+                        '외부 화면(프레젠테이션) 기능을 지원하는 브라우저나 DeX 확장 모드를 사용하거나, ' +
+                        '모니터 쪽에 별도 기기를 연결해야 합니다.'
+                    );
                     return;
                 }
-            
-                window.open(
-                    `display.html?mode=local&teamId=${encodeURIComponent(this.teamId)}`,
-                    "display",
-                    "width=1400,height=900"
-                );
+
+                if (!this.localDisplayBridge?.isSupported) {
+                    alert('이 브라우저는 로컬 Display 연결을 지원하지 않습니다.');
+                    return;
+                }
+
+                window.open(displayUrl.href, 'display', 'width=1400,height=900');
                 setTimeout(() => this.syncDisplay(), 100);
             },
 
@@ -479,13 +506,18 @@
                     getTeamId: () => this.teamId,
                     getState: () => this.getLocalDisplayState()
                 });
+                this.presentationDisplayBridge = createPresentationControllerBridge({
+                    getState: () => this.getLocalDisplayState()
+                });
 
                 clearInterval(this.localDisplayHeartbeat);
                 this.localDisplayHeartbeat = setInterval(() => this.syncDisplay(), 5000);
             },
 
             syncDisplay() {
-                return this.localDisplayBridge?.publish() || false;
+                const localPublished = this.localDisplayBridge?.publish() || false;
+                const presentationPublished = this.presentationDisplayBridge?.publish() || false;
+                return localPublished || presentationPublished;
             },
             
             // --- 점수 및 파울 (양옆 패널) ---
@@ -812,6 +844,7 @@
             if (this.authUnsubscribe) this.authUnsubscribe();
             if (this.localDisplayHeartbeat) clearInterval(this.localDisplayHeartbeat);
             if (this.localDisplayBridge) this.localDisplayBridge.close();
+            if (this.presentationDisplayBridge) this.presentationDisplayBridge.close();
         }
     }).mount('#app');
 </script>
